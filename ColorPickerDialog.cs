@@ -19,7 +19,7 @@ internal sealed class BackdropColorPickerDialog : Form
         MaxLength = 7,
         BackColor = BackdropPalette.Field,
         ForeColor = BackdropPalette.Text,
-        BorderStyle = BorderStyle.FixedSingle,
+        BorderStyle = BorderStyle.None,
         AccessibleName = "Hex color",
         AccessibleDescription = "Enter an opaque RGB color in the format #RRGGBB.",
         TabIndex = 2
@@ -55,7 +55,7 @@ internal sealed class BackdropColorPickerDialog : Form
         AutoScaleMode = AutoScaleMode.Font;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        Font = new Font("Segoe UI", 9.5F);
+        Font = BackdropTypography.Create(9.5F);
         BackColor = BackdropPalette.Window;
         ForeColor = BackdropPalette.Text;
 
@@ -163,19 +163,7 @@ internal sealed class BackdropColorPickerDialog : Form
         label.AutoSize = false;
         label.SetBounds(0, 0, 114, 36);
         label.TextAlign = ContentAlignment.MiddleLeft;
-        var field = new Panel { Location = new Point(122, 0), Size = new Size(308, 36), Padding = new Padding(8, 3, 8, 3), BackColor = BackdropPalette.Surface };
-        field.Paint += (_, e) =>
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var path = BackdropControlPaint.RoundedRectangle(RectangleF.Inflate(field.ClientRectangle, -0.5f, -0.5f), 5);
-            using var fill = new SolidBrush(BackdropPalette.Field);
-            using var border = new Pen(BackdropPalette.Border);
-            e.Graphics.FillPath(fill, path);
-            e.Graphics.DrawPath(border, path);
-        };
-        _hex.BorderStyle = BorderStyle.None;
-        _hex.Dock = DockStyle.Fill;
-        field.Controls.Add(_hex);
+        var field = new BackdropTextInputHost(_hex) { Location = new Point(122, 0), Size = new Size(308, 36) };
         row.Controls.AddRange([label, field]);
         return row;
     }
@@ -190,7 +178,7 @@ internal sealed class BackdropColorPickerDialog : Form
     private static void AddSwatch(Control parent, ColorSwatch swatch, Label hex, string label, int y)
     {
         swatch.SetBounds(308, y + 8, 42, 42);
-        hex.Font = new Font("Segoe UI", 8.25F);
+        hex.Font = BackdropTypography.Create(8.25F);
         hex.Location = new Point(358, y + 27);
         var caption = MakeLabel(label);
         caption.Location = new Point(358, y + 5);

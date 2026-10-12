@@ -86,7 +86,7 @@ foreach ($path in @($harness, $sampleOne, $sampleTwo)) {
 & $harness $sampleOne $sampleTwo
 if ($LASTEXITCODE -ne 0) { throw "The native shell harness failed with exit code $LASTEXITCODE." }
 
-$outputName = "Backdrop-$Version-x64-setup"
+$outputName = "Softstage-$Version-x64-setup"
 $installerPath = Join-Path $outputRoot "$outputName.exe"
 $checksumPath = "$installerPath.sha256"
 if (Test-Path -LiteralPath $installerPath) { Remove-Item -LiteralPath $installerPath -Force }
@@ -103,7 +103,7 @@ if ($signature.Status -notin @([System.Management.Automation.SignatureStatus]::N
 $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash
 Set-Content -LiteralPath $checksumPath -Value "$hash *$([IO.Path]::GetFileName($installerPath))" -Encoding ASCII
 
-Write-Output 'Backdrop installer candidate built and checked.'
+Write-Output 'Softstage installer candidate built and checked.'
 Write-Output "Version: $Version"
 Write-Output "SDK: $sdkVersion"
 Write-Output "Inno compiler signer: $($compilerSignature.SignerCertificate.Subject)"

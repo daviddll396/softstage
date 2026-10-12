@@ -9,8 +9,8 @@
          IgnorableNamespaces="uap uap10 rescap com desktop4 desktop5">
   <Identity Name="Backdrop.ShellPrototype" Publisher="CN=BackdropShellPrototype" Version="1.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
-    <DisplayName>Backdrop</DisplayName>
-    <PublisherDisplayName>Backdrop Prototype</PublisherDisplayName>
+    <DisplayName>Softstage</DisplayName>
+    <PublisherDisplayName>Softstage Prototype</PublisherDisplayName>
     <Logo>Assets\Logo.png</Logo>
     <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
   </Properties>
@@ -23,13 +23,13 @@
   <Applications>
     <Application Id="Backdrop" Executable="Backdrop.exe"
                  uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
-      <uap:VisualElements DisplayName="Backdrop" Description="Create image compositions with Backdrop"
+      <uap:VisualElements DisplayName="Softstage" Description="Create image compositions with Softstage"
                            BackgroundColor="transparent" Square150x150Logo="Assets\Logo150.png"
                            Square44x44Logo="Assets\Logo44.png" />
       <Extensions>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:SurrogateServer DisplayName="Backdrop Explorer command">
+            <com:SurrogateServer DisplayName="Softstage Explorer command">
               <com:Class Id="7a01b163-c207-43ba-97a0-a2f356cbeb44" Path="Backdrop.Shell.dll" ThreadingModel="STA" />
             </com:SurrogateServer>
           </com:ComServer>

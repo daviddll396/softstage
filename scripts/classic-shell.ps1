@@ -20,6 +20,11 @@ $classes = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
     [Microsoft.Win32.RegistryView]::Registry64)
 
 function Test-ValueEqual([string]$name, $actual, [string]$expected) {
+    if ($name -eq 'MUIVerb' -and
+        $expected -eq 'Create composition with Softstage' -and
+        $actual -eq 'Create composition with Backdrop') {
+        return $true
+    }
     if ($name -eq '') {
         return [string]::Equals([string]$actual, $expected, [StringComparison]::OrdinalIgnoreCase)
     }
@@ -37,7 +42,7 @@ function Get-ExpectedVerbValues([string]$extension) {
     return [ordered]@{
         ExplorerCommandHandler = $clsid
         MultiSelectModel = 'Player'
-        MUIVerb = 'Create composition with Backdrop'
+        MUIVerb = 'Create composition with Softstage'
         Icon = "$executable,0"
     }
 }
@@ -67,15 +72,15 @@ function Assert-KeyCanBeOwned([string]$path, [System.Collections.IDictionary]$ex
     try {
         foreach ($name in $key.GetValueNames()) {
             if (-not $expected.Contains($name)) {
-                throw "Backdrop will not replace a value owned by another application at HKCU:\$path ($name)."
+                throw "Softstage will not replace a value owned by another application at HKCU:\$path ($name)."
             }
             if ($key.GetValueKind($name) -ne [Microsoft.Win32.RegistryValueKind]::String -or
                 -not (Test-ValueEqual $name $key.GetValue($name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) ([string]$expected[$name]))) {
-                throw "Backdrop will not replace a different Explorer registration at HKCU:\$path ($name)."
+                throw "Softstage will not replace a different Explorer registration at HKCU:\$path ($name)."
             }
         }
         if ($key.SubKeyCount -gt 0) {
-            throw "Backdrop will not replace a key with child entries at HKCU:\$path."
+            throw "Softstage will not replace a key with child entries at HKCU:\$path."
         }
     }
     finally { $key.Dispose() }
@@ -86,11 +91,11 @@ function Assert-ClassParentCanBeOwned {
     if ($null -eq $key) { return }
     try {
         if ($key.ValueCount -gt 0) {
-            throw "Backdrop will not replace values on the existing class key HKCU:\$classRootPath."
+            throw "Softstage will not replace values on the existing class key HKCU:\$classRootPath."
         }
         foreach ($child in $key.GetSubKeyNames()) {
             if ($child -ne 'InprocServer32') {
-                throw "Backdrop will not replace another class registration at HKCU:\$classRootPath."
+                throw "Softstage will not replace another class registration at HKCU:\$classRootPath."
             }
         }
     }
@@ -205,8 +210,8 @@ try {
             if (Test-Registration) { Write-Output 'installed' } else { Write-Output 'not-installed' }
         }
         'Register' {
-            if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Backdrop.exe was not found beside this script: $executable" }
-            if (-not (Test-Path -LiteralPath $server -PathType Leaf)) { throw "Backdrop.Shell.dll was not found beside this script: $server" }
+            if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Softstage could not find its app executable (Backdrop.exe) beside this script: $executable" }
+            if (-not (Test-Path -LiteralPath $server -PathType Leaf)) { throw "Softstage could not find its Explorer integration beside this script: $server" }
 
             Assert-ClassParentCanBeOwned
             $registrationPlan = @()
@@ -229,7 +234,7 @@ try {
             foreach ($package in $prototype) {
                 if ($package.Publisher -ne 'CN=BackdropShellPrototype' -or
                     $package.PackageFamilyName -ne 'Backdrop.ShellPrototype_ten8cy104z80g') {
-                    throw "A package named Backdrop.ShellPrototype has an unexpected publisher or family identity. It was not removed."
+                    throw "The existing prototype shell package has an unexpected publisher or family identity. It was not removed."
                 }
                 Remove-AppxPackage -Package $package.PackageFullName -ErrorAction Stop
             }

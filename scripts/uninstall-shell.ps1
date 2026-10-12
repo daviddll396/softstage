@@ -3,4 +3,4 @@ $packages = @(Get-AppxPackage -Name 'Backdrop.ShellPrototype' -ErrorAction Silen
 foreach ($package in $packages) {
     Remove-AppxPackage -Package $package.PackageFullName
 }
-Write-Output 'Removed the Backdrop shell package for the current user.'
+Write-Output 'Removed the Softstage shell package for the current user.'

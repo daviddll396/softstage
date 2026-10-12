@@ -8,5 +8,20 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Backdrop</AssemblyName>
     <RootNamespace>Backdrop</RootNamespace>
+    <AssemblyTitle>Softstage</AssemblyTitle>
+    <Title>Softstage</Title>
+    <Product>Softstage</Product>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;site/node_modules/**;site/.next/**;site/out/**</DefaultItemExcludes>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets\fonts\GoogleSansFlex-Regular.ttf" LogicalName="Backdrop.Fonts.GoogleSansFlex-Regular.ttf" />
+    <EmbeddedResource Include="assets\fonts\GoogleSansFlex-Bold.ttf" LogicalName="Backdrop.Fonts.GoogleSansFlex-Bold.ttf" />
+    <EmbeddedResource Include="assets\fonts\OFL.txt" LogicalName="Backdrop.Fonts.OFL.txt" />
+    <EmbeddedResource Include="assets\site\hero-r3\stairway.png" LogicalName="Backdrop.Samples.stairway.png" />
+    <EmbeddedResource Include="assets\site\hero-r3\arch.png" LogicalName="Backdrop.Samples.arch.png" />
+    <EmbeddedResource Include="assets\site\hero-r3\sphere.png" LogicalName="Backdrop.Samples.sphere.png" />
+    <None Update="assets\fonts\OFL.txt" Link="licenses\GoogleSansFlex-OFL.txt" TargetPath="licenses\GoogleSansFlex-OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="docs\legal\privacy.md;docs\legal\third-party-notices.md" Link="legal\%(Filename)%(Extension)" TargetPath="legal\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="LICENSE" Link="licenses\Softstage-MIT-LICENSE.txt" TargetPath="licenses\Softstage-MIT-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

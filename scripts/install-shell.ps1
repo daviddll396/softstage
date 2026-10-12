@@ -9,13 +9,13 @@ $manifest = Join-Path $installRoot 'AppxManifest.xml'
 
 foreach ($file in @('Backdrop.exe', 'Backdrop.Shell.dll', 'AppxManifest.xml')) {
     if (-not (Test-Path -LiteralPath (Join-Path $installRoot $file) -PathType Leaf)) {
-        throw "Shell install is not built. Missing: $(Join-Path $installRoot $file). Run scripts/build-shell.ps1 first."
+        throw "Softstage shell integration is not built. Missing: $(Join-Path $installRoot $file). Run scripts/build-shell.ps1 first."
     }
 }
 
 $registered = @(Get-AppxPackage -Name 'Backdrop.ShellPrototype' -ErrorAction SilentlyContinue)
 if ($registered.Count -gt 0) {
-    Write-Output 'Backdrop direct-menu package is already registered for this user.'
+    Write-Output 'The Softstage direct-menu package is already registered for this user.'
     return
 }
 
@@ -40,6 +40,6 @@ if (-not $developerRegistrationEnabled) {
 Add-AppxPackage -Path $manifest -Register -ExternalLocation $installRoot
 $package = Get-AppxPackage -Name 'Backdrop.ShellPrototype' -ErrorAction SilentlyContinue
 if (-not $package) {
-    throw 'Windows did not register the Backdrop shell package for this user.'
+    throw 'Windows did not register the Softstage shell package for this user.'
 }
 Write-Output "Registered $($package.PackageFullName) for the current user."

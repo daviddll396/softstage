@@ -131,7 +131,7 @@ internal sealed class BackdropButton : Button
         ForeColor = primary ? BackdropPalette.AccentText : BackdropPalette.Text;
         BackColor = primary ? BackdropPalette.Accent : BackdropPalette.Field;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI", 9.25F, primary ? FontStyle.Bold : FontStyle.Regular);
+        Font = BackdropTypography.Create(9.25F, primary ? FontStyle.Bold : FontStyle.Regular);
         FlatAppearance.BorderSize = 0;
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
     }
@@ -277,6 +277,17 @@ internal sealed class BackdropChevronButton : Button
 
     internal bool PointsRight => _right;
 
+    internal void ClipToRoundedParent(Control roundedParent)
+    {
+        var parentBounds = new RectangleF(1 - Left, 1 - Top,
+            roundedParent.ClientSize.Width - 2, roundedParent.ClientSize.Height - 2);
+        using var parentPath = BackdropControlPaint.RoundedRectangle(parentBounds,
+            roundedParent.DeviceDpi / 12f);
+        var previousRegion = Region;
+        Region = new Region(parentPath);
+        previousRegion?.Dispose();
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
@@ -368,7 +379,7 @@ internal sealed class BackdropDropdown : UserControl
         AutoClose = true,
         AutoSize = false,
         BackColor = BackdropPalette.Border,
-        Padding = Padding.Empty,
+        Padding = new Padding(1),
         DropShadowEnabled = true
     };
     private readonly ToolStripControlHost _popupHost;
@@ -378,9 +389,11 @@ internal sealed class BackdropDropdown : UserControl
     private bool _committingSelection;
     private bool _restoreFocusAfterClose;
     private bool _popupWasOpenAtMouseDown;
+    private bool _popupClosedByOwnerMouseDown;
 
     public BackdropDropdown()
     {
+        _popup.Renderer = new ToolStripProfessionalRenderer(new BackdropDropdownColorTable());
         _popupList = new BackdropDropdownList(this);
         Items = [];
         MinimumSize = new Size(0, 38);
@@ -403,6 +416,9 @@ internal sealed class BackdropDropdown : UserControl
         _popup.Items.Add(_popupHost);
         _popup.Closed += (_, _) =>
         {
+            if ((Control.MouseButtons & MouseButtons.Left) != 0 &&
+                ClientRectangle.Contains(PointToClient(Control.MousePosition)))
+                _popupClosedByOwnerMouseDown = true;
             var restoreFocus = _restoreFocusAfterClose;
             _restoreFocusAfterClose = false;
             _popupIsOpen = false;
@@ -450,6 +466,9 @@ internal sealed class BackdropDropdown : UserControl
         }
     }
     internal Control PopupList => _popupList;
+    internal Control PopupSurface => _popup;
+    internal Rectangle PopupBounds => _popup.Bounds;
+    internal bool HasRoundedPopupRegion => _popup.Region is not null;
     internal int PopupCheckmarkCount => SelectedIndex >= 0 ? 1 : 0;
     internal event EventHandler? SelectedIndexChanged;
 
@@ -487,16 +506,22 @@ internal sealed class BackdropDropdown : UserControl
         base.OnMouseDown(e);
         if (e.Button != MouseButtons.Left)
             return;
-        _popupWasOpenAtMouseDown = _popupIsOpen;
+        _popupWasOpenAtMouseDown = _popupIsOpen || _popupClosedByOwnerMouseDown;
+        _popupClosedByOwnerMouseDown = false;
         Focus();
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
-        if (e.Button != MouseButtons.Left || !ClientRectangle.Contains(e.Location))
+        if (e.Button != MouseButtons.Left)
             return;
-        if (_popupWasOpenAtMouseDown)
+        var wasOpenForClick = _popupWasOpenAtMouseDown || _popupIsOpen || _popupClosedByOwnerMouseDown;
+        _popupWasOpenAtMouseDown = false;
+        _popupClosedByOwnerMouseDown = false;
+        if (!ClientRectangle.Contains(e.Location))
+            return;
+        if (wasOpenForClick)
             ClosePopup();
         else
             OpenPopup();
@@ -623,18 +648,30 @@ internal sealed class BackdropDropdown : UserControl
         _popupList.EndUpdate();
         _popupList.Font = Font;
         _popupList.ItemHeight = Math.Max(32, (int)Math.Round(36 * DeviceDpi / 96f));
-        _popupList.Width = Math.Max(100, Width - 2);
+        var workArea = Screen.FromControl(this).WorkingArea;
+        var widestItem = 0;
+        foreach (var item in Items)
+            widestItem = Math.Max(widestItem, TextRenderer.MeasureText(item, Font).Width);
+        var textAndCheckPadding = Math.Max(68, (int)Math.Round(68f * DeviceDpi / 96f));
+        var popupWidth = Math.Min(workArea.Width,
+            Math.Max(Math.Max(100, Width), widestItem + textAndCheckPadding));
+        _popupList.Width = popupWidth - 2;
         _popupList.Height = _popupList.ItemHeight * Math.Min(Items.Count, 8);
         _popupHost.Size = _popupList.Size;
-        _popup.Size = new Size(_popupList.Width + 2, _popupList.Height + 2);
+        _popup.Size = new Size(popupWidth, _popupList.Height + 2);
+        var previousRegion = _popup.Region;
+        using (var popupPath = BackdropControlPaint.RoundedRectangle(
+            new RectangleF(0, 0, _popup.Width, _popup.Height), 7 * DeviceDpi / 96f))
+            _popup.Region = new Region(popupPath);
+        previousRegion?.Dispose();
         _popupIsOpen = true;
         _committingSelection = false;
         _restoreFocusAfterClose = false;
 
-        var workArea = Screen.FromControl(this).WorkingArea;
-        var location = PointToScreen(new Point(0, Height));
+        var popupGap = Math.Max(3, (int)Math.Round(4 * DeviceDpi / 96f));
+        var location = PointToScreen(new Point(0, Height + popupGap));
         if (location.Y + _popup.Height > workArea.Bottom)
-            location.Y = Math.Max(workArea.Top, PointToScreen(Point.Empty).Y - _popup.Height);
+            location.Y = Math.Max(workArea.Top, PointToScreen(Point.Empty).Y - _popup.Height - popupGap);
         if (location.X + _popup.Width > workArea.Right)
             location.X = Math.Max(workArea.Left, workArea.Right - _popup.Width);
         _popup.Show(location);
@@ -664,6 +701,14 @@ internal sealed class BackdropDropdown : UserControl
         }
     }
 
+    private sealed class BackdropDropdownColorTable : ProfessionalColorTable
+    {
+        public override Color ToolStripDropDownBackground => BackdropPalette.Field;
+        public override Color ToolStripBorder => BackdropPalette.Border;
+        public override Color MenuBorder => BackdropPalette.Border;
+        public override Color MenuItemSelected => BackdropPalette.Selection;
+    }
+
     private sealed class BackdropDropdownList : ListBox
     {
         private readonly BackdropDropdown _owner;
@@ -690,8 +735,16 @@ internal sealed class BackdropDropdown : UserControl
             if (e.Index < 0 || e.Index >= Items.Count)
                 return;
             var selected = (e.State & DrawItemState.Selected) != 0;
-            using var brush = new SolidBrush(selected ? BackdropPalette.Selection : BackdropPalette.Field);
-            e.Graphics.FillRectangle(brush, e.Bounds);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var background = new SolidBrush(BackdropPalette.Field))
+                e.Graphics.FillRectangle(background, e.Bounds);
+            if (selected)
+            {
+                var selectionBounds = RectangleF.Inflate(e.Bounds, -5 * DeviceDpi / 96f, -2 * DeviceDpi / 96f);
+                using var selectionPath = BackdropControlPaint.RoundedRectangle(selectionBounds, 5 * DeviceDpi / 96f);
+                using var selection = new SolidBrush(BackdropPalette.Selection);
+                e.Graphics.FillPath(selection, selectionPath);
+            }
             if (e.Index == CommittedIndex)
             {
                 var x = e.Bounds.Left + 14;
@@ -708,11 +761,6 @@ internal sealed class BackdropDropdown : UserControl
             TextRenderer.DrawText(e.Graphics, GetItemText(Items[e.Index]), Font, textBounds,
                 BackdropPalette.Text,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
-            if ((e.State & DrawItemState.Focus) != 0)
-            {
-                using var focus = new Pen(BackdropPalette.Focus);
-                e.Graphics.DrawRectangle(focus, e.Bounds.Left, e.Bounds.Top, e.Bounds.Width - 1, e.Bounds.Height - 1);
-            }
         }
 
         protected override void OnMouseClick(MouseEventArgs e)
@@ -742,6 +790,78 @@ internal sealed class BackdropDropdown : UserControl
     }
 }
 
+internal sealed class BackdropTextInputHost : UserControl
+{
+    private readonly TextBox _editor;
+
+    public BackdropTextInputHost(TextBox editor)
+    {
+        _editor = editor ?? throw new ArgumentNullException(nameof(editor));
+        MinimumSize = new Size(0, 36);
+        Height = 36;
+        BackColor = BackdropPalette.Surface;
+        ForeColor = BackdropPalette.Text;
+        Cursor = Cursors.IBeam;
+        TabStop = false;
+        Margin = Padding.Empty;
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+
+        _editor.AutoSize = false;
+        _editor.BorderStyle = BorderStyle.None;
+        _editor.BackColor = BackdropPalette.Field;
+        _editor.ForeColor = BackdropPalette.Text;
+        _editor.Dock = DockStyle.None;
+        _editor.GotFocus += (_, _) => Invalidate();
+        _editor.LostFocus += (_, _) => Invalidate();
+        _editor.FontChanged += (_, _) => LayoutEditor();
+        Controls.Add(_editor);
+        SizeChanged += (_, _) => LayoutEditor();
+        FontChanged += (_, _) => LayoutEditor();
+        LayoutEditor();
+    }
+
+    protected override void OnDpiChangedAfterParent(EventArgs e)
+    {
+        base.OnDpiChangedAfterParent(e);
+        LayoutEditor();
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e) =>
+        e.Graphics.Clear(Parent?.BackColor ?? BackdropPalette.Surface);
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var bounds = RectangleF.Inflate(ClientRectangle, -0.5f, -0.5f);
+        using var path = BackdropControlPaint.RoundedRectangle(bounds, DeviceDpi / 12f);
+        using var fill = new SolidBrush(BackdropPalette.Field);
+        using var border = new Pen(ContainsFocus ? BackdropPalette.Focus : BackdropPalette.Border);
+        e.Graphics.FillPath(fill, path);
+        e.Graphics.DrawPath(border, path);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (e.Button == MouseButtons.Left)
+            _editor.Focus();
+    }
+
+    private void LayoutEditor()
+    {
+        if (_editor.IsDisposed || ClientSize.Width <= 0 || ClientSize.Height <= 0)
+            return;
+
+        var horizontalInset = Math.Max(8, (int)Math.Round(8f * DeviceDpi / 96f));
+        var editorHeight = Math.Min(_editor.PreferredHeight, ClientSize.Height);
+        var editorTop = (ClientSize.Height - editorHeight) / 2;
+        _editor.Bounds = new Rectangle(horizontalInset, editorTop,
+            Math.Max(0, ClientSize.Width - horizontalInset * 2), editorHeight);
+    }
+}
+
 internal sealed class BackdropNumberSelector : UserControl
 {
     private readonly BackdropChevronButton _decreaseButton;
@@ -763,6 +883,7 @@ internal sealed class BackdropNumberSelector : UserControl
         _decreaseButton = new BackdropChevronButton(right: false) { AccessibleName = "Decrease value", TabIndex = 0, Margin = Padding.Empty };
         _valueEditor = new TextBox
         {
+            AutoSize = false,
             BorderStyle = BorderStyle.None,
             TextAlign = HorizontalAlignment.Center,
             AccessibleName = "Numeric value",
@@ -994,14 +1115,24 @@ internal sealed class BackdropNumberSelector : UserControl
         if (_valueEditor is null)
             return;
 
-        var inset = Math.Max(2, DeviceDpi / 48);
-        var buttonWidth = Math.Min(Math.Max(DeviceDpi / 3, 24), Math.Max(0, ClientSize.Width / 3 - inset));
-        var buttonHeight = Math.Max(0, ClientSize.Height - inset * 2);
-        _decreaseButton.Bounds = new Rectangle(inset, inset, buttonWidth, buttonHeight);
-        _increaseButton.Bounds = new Rectangle(ClientSize.Width - inset - buttonWidth, inset, buttonWidth, buttonHeight);
+        var edgeInset = Math.Max(3, (int)Math.Ceiling(3f * DeviceDpi / 96f));
+        var verticalInset = Math.Max(2, DeviceDpi / 48);
+        var buttonGap = Math.Max(2, (int)Math.Round(3f * DeviceDpi / 96f));
+        var centerMinimumWidth = Math.Min(44, Math.Max(0,
+            ClientSize.Width - edgeInset * 2 - buttonGap * 2));
+        var availableButtonWidth = Math.Max(0,
+            (ClientSize.Width - edgeInset * 2 - buttonGap * 2 - centerMinimumWidth) / 2);
+        var preferredButtonWidth = Math.Max(24, (int)Math.Round(28f * DeviceDpi / 96f));
+        var buttonWidth = Math.Min(preferredButtonWidth, availableButtonWidth);
+        var buttonHeight = Math.Max(0, ClientSize.Height - verticalInset * 2);
+        _decreaseButton.Bounds = new Rectangle(edgeInset, verticalInset, buttonWidth, buttonHeight);
+        _increaseButton.Bounds = new Rectangle(ClientSize.Width - edgeInset - buttonWidth,
+            verticalInset, buttonWidth, buttonHeight);
+        _decreaseButton.ClipToRoundedParent(this);
+        _increaseButton.ClipToRoundedParent(this);
 
-        var editorLeft = _decreaseButton.Right + inset;
-        var editorRight = _increaseButton.Left - inset;
+        var editorLeft = _decreaseButton.Right + buttonGap;
+        var editorRight = _increaseButton.Left - buttonGap;
         var editorHeight = Math.Min(_valueEditor.PreferredHeight, buttonHeight);
         var editorTop = (ClientSize.Height - editorHeight) / 2;
         _valueEditor.Bounds = new Rectangle(editorLeft, editorTop, Math.Max(0, editorRight - editorLeft), editorHeight);
@@ -1042,7 +1173,7 @@ internal sealed class SegmentedChoiceControl : UserControl
         Height = 38;
         AccessibleRole = AccessibleRole.Grouping;
         TabStop = false;
-        BackColor = BackdropPalette.Field;
+        BackColor = BackdropPalette.Surface;
         ForeColor = BackdropPalette.Text;
         Margin = Padding.Empty;
 
@@ -1051,9 +1182,9 @@ internal sealed class SegmentedChoiceControl : UserControl
             Dock = DockStyle.Fill,
             ColumnCount = _items.Count,
             RowCount = 1,
-            Padding = new Padding(2),
+            Padding = Padding.Empty,
             Margin = Padding.Empty,
-            BackColor = BackdropPalette.Field
+            BackColor = BackdropPalette.Surface
         };
         row.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         for (var index = 0; index < _items.Count; index++)
@@ -1087,7 +1218,7 @@ internal sealed class SegmentedRadioButton : RadioButton
     public SegmentedRadioButton(string text)
     {
         Text = text;
-        Font = new Font("Segoe UI", 8.5F);
+        Font = BackdropTypography.Create(8.5F);
         Appearance = Appearance.Button;
         FlatStyle = FlatStyle.Flat;
         UseVisualStyleBackColor = false;

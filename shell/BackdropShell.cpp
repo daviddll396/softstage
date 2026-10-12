@@ -227,7 +227,7 @@ public:
 
     IFACEMETHODIMP GetTitle(IShellItemArray*, PWSTR* title) override
     {
-        return CopyTitle(L"Create composition with Backdrop", title);
+        return CopyTitle(L"Create composition with Softstage", title);
     }
 
     IFACEMETHODIMP GetIcon(IShellItemArray*, PWSTR* icon) override

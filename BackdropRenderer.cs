@@ -17,6 +17,7 @@ internal static class BackdropRenderer
     {
         ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff"
     };
+    private static readonly Lazy<Bitmap[]> SampleArtwork = new(LoadSampleArtwork);
 
     public static bool IsSupportedImagePath(string path) => SupportedExtensions.Contains(Path.GetExtension(path));
 
@@ -177,8 +178,8 @@ internal static class BackdropRenderer
         cancellationToken.ThrowIfCancellationRequested();
         var folder = Path.GetDirectoryName(Path.GetFullPath(paths[0]))!;
         var baseName = paths.Count == 1
-            ? $"{Path.GetFileNameWithoutExtension(paths[0])}-backdrop"
-            : "backdrop-composition";
+            ? $"{Path.GetFileNameWithoutExtension(paths[0])}-softstage"
+            : "softstage-composition";
 
         for (var suffix = 1; ; suffix++)
         {
@@ -228,10 +229,7 @@ internal static class BackdropRenderer
 
     public static Bitmap CreateSamplePreview(AppSettings settings)
     {
-        using var first = CreateSampleAppScreen(400, 800, 0);
-        using var second = CreateSampleAppScreen(400, 800, 1);
-        using var third = CreateSampleAppScreen(400, 800, 2);
-        return RenderBitmaps([first, second, third], settings, shadowMaskLongEdge: MaximumPreviewShadowMaskLongEdge);
+        return RenderBitmaps(SampleArtwork.Value, settings, shadowMaskLongEdge: MaximumPreviewShadowMaskLongEdge);
     }
 
     public static Bitmap CreateSamplePreview(AppSettings settings, int maximumLongEdge)
@@ -442,7 +440,7 @@ internal static class BackdropRenderer
             foreach (var image in loaded)
                 image.Bitmap.Dispose();
             if (ex is ArgumentException or OutOfMemoryException or ExternalException or IOException)
-                throw new InvalidDataException("Backdrop could not load the selected images. Check that they are valid and try again.", ex);
+                throw new InvalidDataException("Softstage could not load the selected images. Check that they are valid and try again.", ex);
             throw;
         }
     }
@@ -652,8 +650,9 @@ internal static class BackdropRenderer
             using var graphics = Graphics.FromImage(tile);
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
             graphics.Clear(Color.Transparent);
-            var contrast = baseColor.GetBrightness() < 0.5f ? Color.White : Color.Black;
-            using var brush = new SolidBrush(Color.FromArgb(18, contrast));
+            var lightBackground = baseColor.GetBrightness() >= 0.5f;
+            var contrast = lightBackground ? Color.Black : Color.White;
+            using var brush = new SolidBrush(Color.FromArgb(lightBackground ? 36 : 18, contrast));
             for (var y = spacing / 2f; y < tileSize; y += spacing)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -815,9 +814,10 @@ internal static class BackdropRenderer
         if (strength <= 0)
             return;
 
-        var blur = Math.Clamp(canvasWidth * 0.012f, 8, 32);
+        var blur = Math.Clamp(canvasWidth * 0.022f, 12, 80);
         var offset = 0f;
-        var padding = (int)Math.Ceiling(blur + offset);
+        var sigma = blur * 0.65f;
+        var padding = (int)Math.Ceiling(sigma * 3f + offset);
         var scale = Math.Min(1f, shadowMaskLongEdge / Math.Max(bounds.Width, bounds.Height));
         var width = Math.Max(1, (int)Math.Ceiling((bounds.Width + padding * 2) * scale));
         var height = Math.Max(1, (int)Math.Ceiling((bounds.Height + padding * 2) * scale));
@@ -825,11 +825,11 @@ internal static class BackdropRenderer
         using (var maskGraphics = Graphics.FromImage(mask))
         {
             maskGraphics.Clear(Color.Transparent);
-            using var brush = new SolidBrush(Color.FromArgb(Math.Clamp((int)Math.Round(strength * 180), 0, 255), Color.Black));
+            using var brush = new SolidBrush(Color.FromArgb(Math.Clamp((int)Math.Round(strength * 120), 0, 255), Color.Black));
             maskGraphics.FillRectangle(brush, padding * scale, (padding + offset) * scale, bounds.Width * scale, bounds.Height * scale);
         }
 
-        BlurShadowMask(mask, blur * 0.45f * scale);
+        BlurShadowMask(mask, sigma * scale);
         graphics.DrawImage(mask,
             new RectangleF(bounds.X - padding, bounds.Y - padding, bounds.Width + padding * 2, bounds.Height + padding * 2),
             new Rectangle(0, 0, width, height),
@@ -940,248 +940,26 @@ internal static class BackdropRenderer
         return image;
     }
 
-    private static Bitmap CreateSampleAppScreen(int width, int height, int page)
+    private static Bitmap[] LoadSampleArtwork() =>
+    [
+        LoadSampleImage("Backdrop.Samples.stairway.png"),
+        LoadSampleImage("Backdrop.Samples.arch.png"),
+        LoadSampleImage("Backdrop.Samples.sphere.png")
+    ];
+
+    private static Bitmap LoadSampleImage(string resourceName)
     {
-        var image = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        using var stream = typeof(BackdropRenderer).Assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException($"The embedded sample image '{resourceName}' is missing.");
+        using var source = Image.FromStream(stream, useEmbeddedColorManagement: true, validateImageData: true);
+        var image = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppPArgb);
         using var graphics = Graphics.FromImage(image);
-        graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-        graphics.Clear(Color.FromArgb(246, 243, 237));
-
-        var scale = width / 400f;
-        float S(float value) => value * scale;
-        var ink = Color.FromArgb(48, 48, 46);
-        var secondary = Color.FromArgb(118, 116, 111);
-        var line = Color.FromArgb(222, 217, 208);
-        var card = Color.FromArgb(252, 250, 246);
-        var peach = Color.FromArgb(215, 157, 132);
-        var lilac = Color.FromArgb(174, 162, 194);
-        var sage = Color.FromArgb(143, 163, 143);
-        var pageTitle = page switch { 0 => "Overview", 1 => "Activity", _ => "Spending" };
-        var subtitle = page switch { 0 => "A clear view of your money", 1 => "Recent transactions", _ => "Monthly plan details" };
-
-        using (var outerBorder = new Pen(line, Math.Max(1, S(1))))
-            graphics.DrawRectangle(outerBorder, S(0.5f), S(0.5f), width - S(1), height - S(1));
-
-        DrawSampleText(graphics, "9:41", S(24), S(17), S(12), ink, FontStyle.Bold);
-        DrawStatusGlyphs(graphics, S(328), S(23), S(1), secondary);
-        DrawSampleText(graphics, "YOUR MONEY", S(24), S(55), S(10), secondary, FontStyle.Bold);
-        DrawSampleText(graphics, pageTitle, S(24), S(74), S(28), ink, FontStyle.Bold);
-        DrawSampleText(graphics, subtitle, S(24), S(111), S(14), secondary);
-
-        if (page == 0)
-            DrawOverviewPage(graphics, S, card, ink, secondary, line, peach, lilac, sage);
-        else if (page == 1)
-            DrawActivityPage(graphics, S, card, ink, secondary, line, peach, lilac, sage);
-        else
-            DrawSpendingPage(graphics, S, card, ink, secondary, line, peach, lilac, sage);
-
-        DrawBottomNavigation(graphics, S, ink, secondary, peach, page);
+        graphics.CompositingMode = CompositingMode.SourceCopy;
+        graphics.DrawImage(source,
+            new Rectangle(0, 0, source.Width, source.Height),
+            0, 0, source.Width, source.Height, GraphicsUnit.Pixel);
         return image;
     }
-
-    private static void DrawOverviewPage(Graphics graphics, Func<float, float> s, Color card, Color ink, Color secondary, Color line, Color peach, Color lilac, Color sage)
-    {
-        FillSampleCard(graphics, s, new RectangleF(20, 153, 360, 240), Color.FromArgb(246, 232, 220), line);
-        DrawSampleText(graphics, "TOTAL BALANCE", s(38), s(173), s(10), secondary, FontStyle.Bold);
-        DrawSampleText(graphics, "$12,480.50", s(38), s(194), s(30), ink, FontStyle.Bold);
-        FillSamplePill(graphics, s, new RectangleF(38, 239, 91, 28), Color.FromArgb(243, 231, 222));
-        DrawSampleText(graphics, "+ 4.8%", s(50), s(245), s(12), Color.FromArgb(146, 100, 77), FontStyle.Bold);
-        DrawSampleText(graphics, "this month", s(139), s(246), s(12), secondary);
-        DrawSampleText(graphics, "Balance trend", s(38), s(291), s(12), secondary, FontStyle.Bold);
-        DrawChart(graphics, s, new RectangleF(38, 318, 324, 52), peach, line, withFill: true);
-
-        FillSampleCard(graphics, s, new RectangleF(20, 411, 360, 252), card, line);
-        DrawSampleText(graphics, "THIS WEEK", s(38), s(431), s(10), secondary, FontStyle.Bold);
-        DrawSampleText(graphics, "$684.20", s(38), s(450), s(24), ink, FontStyle.Bold);
-        DrawSampleText(graphics, "Spending", s(38), s(489), s(12), secondary);
-        DrawWeekBars(graphics, s, new RectangleF(40, 531, 318, 79), [peach, lilac, sage, peach, lilac, sage, peach]);
-        DrawSampleText(graphics, "M     T     W     T     F     S     S", s(42), s(619), s(10), secondary);
-    }
-
-    private static void DrawActivityPage(Graphics graphics, Func<float, float> s, Color card, Color ink, Color secondary, Color line, Color peach, Color lilac, Color sage)
-    {
-        FillSampleCard(graphics, s, new RectangleF(20, 153, 360, 151), Color.FromArgb(235, 228, 240), line);
-        DrawSampleText(graphics, "MARCH TOTAL", s(38), s(173), s(10), secondary, FontStyle.Bold);
-        DrawSampleText(graphics, "$842.60", s(38), s(194), s(28), ink, FontStyle.Bold);
-        DrawChart(graphics, s, new RectangleF(218, 195, 138, 69), lilac, line, withFill: true);
-        DrawSampleText(graphics, "12 transactions", s(38), s(252), s(12), secondary);
-
-        FillSampleCard(graphics, s, new RectangleF(20, 322, 360, 341), card, line);
-        DrawSampleText(graphics, "RECENT", s(38), s(342), s(10), secondary, FontStyle.Bold);
-        DrawTransaction(graphics, s, 373, "Market & Co.", "Groceries · Today", "−$58.40", peach, ink, secondary, line);
-        DrawTransaction(graphics, s, 441, "Northside Cafe", "Coffee · Yesterday", "−$12.80", lilac, ink, secondary, line);
-        DrawTransaction(graphics, s, 509, "Monthly pay", "Income · Mar 12", "+$2,400", sage, ink, secondary, line);
-        DrawTransaction(graphics, s, 577, "City transit", "Travel · Mar 11", "−$24.00", peach, ink, secondary, line, separator: false);
-    }
-
-    private static void DrawSpendingPage(Graphics graphics, Func<float, float> s, Color card, Color ink, Color secondary, Color line, Color peach, Color lilac, Color sage)
-    {
-        FillSampleCard(graphics, s, new RectangleF(20, 153, 360, 225), Color.FromArgb(246, 232, 220), line);
-        DrawSampleText(graphics, "HOME & BILLS", s(38), s(173), s(10), secondary, FontStyle.Bold);
-        DrawSampleText(graphics, "$420", s(38), s(194), s(30), ink, FontStyle.Bold);
-        DrawSampleText(graphics, "of $600 monthly plan", s(38), s(235), s(12), secondary);
-        FillSamplePill(graphics, s, new RectangleF(38, 265, 324, 10), Color.FromArgb(235, 230, 222));
-        FillSamplePill(graphics, s, new RectangleF(38, 265, 227, 10), peach);
-        DrawSampleText(graphics, "70% used", s(38), s(289), s(11), secondary);
-        DrawSampleText(graphics, "$180 left", s(280), s(289), s(11), secondary, alignment: StringAlignment.Far, width: s(82));
-        DrawChart(graphics, s, new RectangleF(38, 320, 324, 40), lilac, line, withFill: false);
-
-        FillSampleCard(graphics, s, new RectangleF(20, 397, 360, 266), card, line);
-        DrawSampleText(graphics, "PLAN BREAKDOWN", s(38), s(417), s(10), secondary, FontStyle.Bold);
-        DrawBreakdownRow(graphics, s, 455, "Housing", "$320", peach, ink, secondary, line);
-        DrawBreakdownRow(graphics, s, 511, "Utilities", "$68", lilac, ink, secondary, line);
-        DrawBreakdownRow(graphics, s, 567, "Internet", "$32", sage, ink, secondary, line, separator: false);
-        DrawSampleText(graphics, "Updated just now", s(38), s(629), s(10), secondary);
-    }
-
-    private static void DrawStatusGlyphs(Graphics graphics, float x, float y, float scale, Color color)
-    {
-        using var pen = new Pen(color, Math.Max(1, scale * 1.6f)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        for (var i = 0; i < 4; i++)
-            graphics.DrawLine(pen, x + i * 4 * scale, y, x + i * 4 * scale, y - (3 + i * 2) * scale);
-        graphics.DrawArc(pen, x + 26 * scale, y - 8 * scale, 15 * scale, 13 * scale, 215, 110);
-        graphics.DrawArc(pen, x + 30 * scale, y - 4 * scale, 7 * scale, 7 * scale, 220, 100);
-        using var battery = new Pen(color, Math.Max(1, scale));
-        graphics.DrawRectangle(battery, x + 48 * scale, y - 8 * scale, 22 * scale, 12 * scale);
-        using var charge = new SolidBrush(color);
-        graphics.FillRectangle(charge, x + 70 * scale, y - 5 * scale, 2 * scale, 6 * scale);
-        graphics.FillRectangle(charge, x + 51 * scale, y - 5 * scale, 13 * scale, 6 * scale);
-    }
-
-    private static void DrawBottomNavigation(Graphics graphics, Func<float, float> s, Color ink, Color secondary, Color peach, int selectedPage)
-    {
-        using var pen = new Pen(Color.FromArgb(225, 220, 212), s(1));
-        graphics.DrawLine(pen, s(20), s(698), s(380), s(698));
-        var labels = new[] { "Home", "Activity", "Plan" };
-        for (var i = 0; i < labels.Length; i++)
-        {
-            var center = s(80 + i * 120);
-            var color = i == selectedPage ? ink : secondary;
-            using var glyph = new Pen(color, s(1.7f)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            if (i == 0)
-            {
-                graphics.DrawLine(glyph, center - s(8), s(723), center, s(715));
-                graphics.DrawLine(glyph, center, s(715), center + s(8), s(723));
-                graphics.DrawRectangle(glyph, center - s(6), s(722), s(12), s(10));
-            }
-            else if (i == 1)
-            {
-                graphics.DrawEllipse(glyph, center - s(7), s(715), s(14), s(14));
-                graphics.DrawLine(glyph, center, s(718), center, s(726));
-                graphics.DrawLine(glyph, center - s(4), s(722), center + s(3), s(722));
-            }
-            else
-            {
-                graphics.DrawRectangle(glyph, center - s(8), s(715), s(16), s(14));
-                graphics.DrawLine(glyph, center - s(4), s(719), center + s(4), s(719));
-                graphics.DrawLine(glyph, center - s(4), s(724), center + s(4), s(724));
-            }
-            DrawSampleText(graphics, labels[i], center - s(36), s(737), s(10), color, i == selectedPage ? FontStyle.Bold : FontStyle.Regular, StringAlignment.Center, s(72));
-            if (i == selectedPage)
-            {
-                using var mark = new SolidBrush(peach);
-                graphics.FillEllipse(mark, center - s(2), s(758), s(4), s(4));
-            }
-        }
-    }
-
-    private static void FillSampleCard(Graphics graphics, Func<float, float> s, RectangleF bounds, Color fill, Color border)
-    {
-        bounds = Scale(bounds, s);
-        using var path = BackdropControlPaint.RoundedRectangle(bounds, s(14));
-        using var brush = new SolidBrush(fill);
-        using var pen = new Pen(border, s(1));
-        graphics.FillPath(brush, path);
-        graphics.DrawPath(pen, path);
-    }
-
-    private static void FillSamplePill(Graphics graphics, Func<float, float> s, RectangleF bounds, Color fill)
-    {
-        bounds = Scale(bounds, s);
-        using var path = BackdropControlPaint.RoundedRectangle(bounds, bounds.Height / 2);
-        using var brush = new SolidBrush(fill);
-        graphics.FillPath(brush, path);
-    }
-
-    private static void DrawTransaction(Graphics graphics, Func<float, float> s, float top, string title, string detail, string amount, Color color, Color ink, Color secondary, Color line, bool separator = true)
-    {
-        using (var dot = new SolidBrush(Color.FromArgb(62, color)))
-            graphics.FillEllipse(dot, s(38), s(top + 8), s(38), s(38));
-        using (var mark = new Pen(color, s(2)))
-            graphics.DrawLine(mark, s(49), s(top + 27), s(65), s(top + 27));
-        DrawSampleText(graphics, title, s(88), s(top + 3), s(13), ink, FontStyle.Bold);
-        DrawSampleText(graphics, detail, s(88), s(top + 24), s(11), secondary);
-        DrawSampleText(graphics, amount, s(206), s(top + 10), s(12), ink, FontStyle.Bold, StringAlignment.Far, s(154));
-        if (separator)
-        {
-            using var pen = new Pen(line, s(1));
-            graphics.DrawLine(pen, s(88), s(top + 60), s(362), s(top + 60));
-        }
-    }
-
-    private static void DrawBreakdownRow(Graphics graphics, Func<float, float> s, float top, string title, string amount, Color color, Color ink, Color secondary, Color line, bool separator = true)
-    {
-        using (var dot = new SolidBrush(color))
-            graphics.FillEllipse(dot, s(38), s(top + 7), s(13), s(13));
-        DrawSampleText(graphics, title, s(62), s(top + 4), s(13), ink, FontStyle.Bold);
-        DrawSampleText(graphics, amount, s(250), s(top + 4), s(13), secondary, alignment: StringAlignment.Far, width: s(112));
-        if (separator)
-        {
-            using var pen = new Pen(line, s(1));
-            graphics.DrawLine(pen, s(62), s(top + 39), s(362), s(top + 39));
-        }
-    }
-
-    private static void DrawWeekBars(Graphics graphics, Func<float, float> s, RectangleF bounds, Color[] colors)
-    {
-        bounds = Scale(bounds, s);
-        using var track = new SolidBrush(Color.FromArgb(235, 230, 222));
-        var heights = new[] { .55f, .75f, .42f, .86f, .62f, .92f, .47f };
-        var gap = s(7);
-        var barWidth = (bounds.Width - gap * (colors.Length - 1)) / colors.Length;
-        for (var i = 0; i < colors.Length; i++)
-        {
-            var height = bounds.Height * heights[i];
-            var x = bounds.Left + i * (barWidth + gap);
-            var bar = new RectangleF(x, bounds.Bottom - height, barWidth, height);
-            using var front = new SolidBrush(Color.FromArgb(70, colors[i]));
-            graphics.FillRectangle(track, new RectangleF(bar.X, bounds.Top, bar.Width, bounds.Height));
-            using var path = BackdropControlPaint.RoundedRectangle(bar, s(5));
-            graphics.FillPath(front, path);
-        }
-    }
-
-    private static void DrawChart(Graphics graphics, Func<float, float> s, RectangleF bounds, Color color, Color line, bool withFill)
-    {
-        bounds = Scale(bounds, s);
-        var values = new[] { .62f, .55f, .68f, .43f, .5f, .3f, .38f, .21f, .3f, .14f };
-        var points = values.Select((value, index) => new PointF(
-            bounds.Left + bounds.Width * index / (values.Length - 1),
-            bounds.Top + bounds.Height * value)).ToArray();
-        using (var guide = new Pen(line, s(1)) { DashStyle = DashStyle.Dot })
-            graphics.DrawLine(guide, bounds.Left, bounds.Bottom, bounds.Right, bounds.Bottom);
-        if (withFill)
-        {
-            var area = new List<PointF>(points) { new(bounds.Right, bounds.Bottom), new(bounds.Left, bounds.Bottom) };
-            using var fill = new SolidBrush(Color.FromArgb(35, color));
-            graphics.FillPolygon(fill, area.ToArray());
-        }
-        using var pen = new Pen(color, s(2.2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
-        graphics.DrawLines(pen, points);
-    }
-
-    private static void DrawSampleText(Graphics graphics, string text, float x, float y, float size, Color color, FontStyle style = FontStyle.Regular, StringAlignment alignment = StringAlignment.Near, float width = 350)
-    {
-        using var font = new Font("Segoe UI", size, style, GraphicsUnit.Pixel);
-        using var brush = new SolidBrush(color);
-        using var format = new StringFormat { Alignment = alignment, LineAlignment = StringAlignment.Near, Trimming = StringTrimming.EllipsisCharacter };
-        graphics.DrawString(text, font, brush, new RectangleF(x, y, width, size * 1.6f), format);
-    }
-
-    private static RectangleF Scale(RectangleF rectangle, Func<float, float> s) => new(
-        s(rectangle.X), s(rectangle.Y), s(rectangle.Width), s(rectangle.Height));
-
     private static Color Blend(Color from, Color to, float amount) => Color.FromArgb(
         (int)(from.R + (to.R - from.R) * amount),
         (int)(from.G + (to.G - from.G) * amount),

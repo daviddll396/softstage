@@ -20,7 +20,7 @@ $shellRoot = Join-Path $projectRoot 'shell'
 
 if (-not (Test-Path -LiteralPath $outputRoot -PathType Container) -or
     -not (Test-Path -LiteralPath (Join-Path $outputRoot 'Backdrop.exe') -PathType Leaf)) {
-    throw "Published Backdrop.exe was not found in $outputRoot. Publish the app to artifacts/v2 first."
+    throw "Softstage app executable (Backdrop.exe) was not found in $outputRoot. Publish the app to artifacts/v2 first."
 }
 
 $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
@@ -58,31 +58,47 @@ if (-not $SkipSparsePackage) {
         New-Item -ItemType Directory -Path $assetsRoot | Out-Null
     }
     Add-Type -AssemblyName System.Drawing
-    foreach ($size in @(44, 150)) {
-        $bitmap = [System.Drawing.Bitmap]::new($size, $size)
-        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-        try {
-            $graphics.Clear([System.Drawing.Color]::Transparent)
-            $margin = [int][Math]::Floor($size * 0.1)
-            $graphics.DrawIcon([System.Drawing.SystemIcons]::Application,
-                [System.Drawing.Rectangle]::new($margin, $margin, $size - (2 * $margin), $size - (2 * $margin)))
-            $bitmap.Save((Join-Path $assetsRoot "Logo$size.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-        }
-        finally {
-            $graphics.Dispose()
-            $bitmap.Dispose()
-        }
+    $appIconPath = Join-Path $projectRoot 'assets\app-icon.png'
+    if (-not (Test-Path -LiteralPath $appIconPath -PathType Leaf)) {
+        throw "The canonical Softstage app icon is missing: $appIconPath"
     }
-    $logo = [System.Drawing.Bitmap]::new(64, 64)
-    $logoGraphics = [System.Drawing.Graphics]::FromImage($logo)
+
+    $iconSource = [System.Drawing.Image]::FromFile($appIconPath)
     try {
-        $logoGraphics.Clear([System.Drawing.Color]::Transparent)
-        $logoGraphics.DrawIcon([System.Drawing.SystemIcons]::Application, [System.Drawing.Rectangle]::new(0, 0, 64, 64))
-        $logo.Save((Join-Path $assetsRoot 'Logo.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+        $logoSizes = @(
+            [pscustomobject]@{ Name = 'Logo44.png'; Size = 44 },
+            [pscustomobject]@{ Name = 'Logo150.png'; Size = 150 },
+            [pscustomobject]@{ Name = 'Logo.png'; Size = 64 }
+        )
+        foreach ($logoSize in $logoSizes) {
+            $size = $logoSize.Size
+            $bitmap = [System.Drawing.Bitmap]::new($size, $size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            try {
+                $graphics.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceCopy
+                $graphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
+                $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+                $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+                $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+                $graphics.Clear([System.Drawing.Color]::Transparent)
+                $graphics.DrawImage(
+                    $iconSource,
+                    [System.Drawing.Rectangle]::new(0, 0, $size, $size),
+                    0,
+                    0,
+                    $iconSource.Width,
+                    $iconSource.Height,
+                    [System.Drawing.GraphicsUnit]::Pixel)
+                $bitmap.Save((Join-Path $assetsRoot $logoSize.Name), [System.Drawing.Imaging.ImageFormat]::Png)
+            }
+            finally {
+                $graphics.Dispose()
+                $bitmap.Dispose()
+            }
+        }
     }
     finally {
-        $logoGraphics.Dispose()
-        $logo.Dispose()
+        $iconSource.Dispose()
     }
 }
 
@@ -152,7 +168,7 @@ if (-not $SkipSparsePackage) {
 }
 
 if ($SkipSparsePackage) {
-    Write-Output "Built Backdrop.Shell.dll and harness in $outputRoot (sparse package skipped)."
+    Write-Output "Built Softstage Explorer integration (Backdrop.Shell.dll) and harness in $outputRoot (sparse package skipped)."
 } else {
-    Write-Output "Built Backdrop.Shell.dll and sparse package in $outputRoot"
+    Write-Output "Built Softstage Explorer integration (Backdrop.Shell.dll) and sparse package in $outputRoot"
 }

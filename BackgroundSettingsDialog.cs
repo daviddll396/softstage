@@ -5,6 +5,10 @@ namespace Backdrop;
 
 internal sealed class BackgroundSettingsDialog : Form
 {
+    private const int FieldWidth = 460;
+    private const int LabelColumnWidth = 160;
+    private const int FieldHeight = 38;
+
     private readonly BackdropDropdown _mode = new();
     private readonly BackdropDropdown _pattern = new();
     private readonly BackdropNumberSelector _autoGradientLightenPercent = new() { Minimum = 0, Maximum = 100, Increment = 5 };
@@ -48,7 +52,7 @@ internal sealed class BackgroundSettingsDialog : Form
         AutoScaleMode = AutoScaleMode.Font;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        Font = new Font("Segoe UI", 9.5F);
+        Font = BackdropTypography.Create(9.5F);
         BackColor = BackdropPalette.Window;
         ForeColor = BackdropPalette.Text;
 
@@ -69,12 +73,14 @@ internal sealed class BackgroundSettingsDialog : Form
         for (var i = 0; i < 5; i++)
             _fields.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         _fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        _fields.Controls.Add(CreateComboRow("Background mode", _mode), 0, 0);
-        _autoGradientLightenRow = CreateNumericRow("Lighten colors (%)", _autoGradientLightenPercent);
+        _fields.Controls.Add(CreateFieldRow("Background mode", _mode), 0, 0);
+        _autoGradientLightenPercent.Font = BackdropTypography.Create(10F);
+        _autoGradientLightenPercent.RefreshAccessibility();
+        _autoGradientLightenRow = CreateFieldRow("Lighten colors (%)", _autoGradientLightenPercent);
         _fields.Controls.Add(_autoGradientLightenRow, 0, 1);
         _fields.Controls.Add(_color1, 0, 2);
         _fields.Controls.Add(_color2, 0, 3);
-        _patternRow = CreateComboRow("Pattern style", _pattern);
+        _patternRow = CreateFieldRow("Pattern style", _pattern);
         _fields.Controls.Add(_patternRow, 0, 4);
 
         var note = new Label
@@ -121,7 +127,7 @@ internal sealed class BackgroundSettingsDialog : Form
             BackColor = BackdropPalette.Surface,
             Dock = DockStyle.Fill
         };
-        content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 460));
+        content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, FieldWidth));
         for (var i = 0; i < 4; i++)
             content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         content.Controls.Add(new Label
@@ -161,7 +167,7 @@ internal sealed class BackgroundSettingsDialog : Form
         _patternRow.Visible = SelectedMode == BackgroundMode.Pattern;
     }
 
-    private static Control CreateComboRow(string labelText, BackdropDropdown combo)
+    private static Control CreateFieldRow(string labelText, Control field)
     {
         var row = new TableLayoutPanel
         {
@@ -169,15 +175,16 @@ internal sealed class BackgroundSettingsDialog : Form
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             RowCount = 1,
-            Width = 460,
-            MinimumSize = new Size(460, 40),
+            Width = FieldWidth,
+            Height = FieldHeight,
+            MinimumSize = new Size(FieldWidth, FieldHeight),
             Dock = DockStyle.Fill,
             BackColor = BackdropPalette.Surface,
-            Margin = new Padding(0, 0, 0, 6)
+            Margin = new Padding(0, 0, 0, 8)
         };
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        row.RowStyles.Add(new RowStyle(SizeType.Absolute, FieldHeight));
         var label = new Label
         {
             Text = labelText,
@@ -187,48 +194,12 @@ internal sealed class BackgroundSettingsDialog : Form
             Anchor = AnchorStyles.Left,
             Margin = new Padding(0)
         };
-        combo.Dock = DockStyle.Fill;
-        combo.Height = 38;
-        combo.MinimumSize = new Size(0, 38);
-        combo.Margin = new Padding(0);
+        field.Dock = DockStyle.Fill;
+        field.Height = FieldHeight;
+        field.MinimumSize = new Size(0, FieldHeight);
+        field.Margin = Padding.Empty;
         row.Controls.Add(label, 0, 0);
-        row.Controls.Add(combo, 1, 0);
-        return row;
-    }
-
-    private static Control CreateNumericRow(string labelText, BackdropNumberSelector numeric)
-    {
-        var row = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = 2,
-            RowCount = 1,
-            Width = 460,
-            MinimumSize = new Size(460, 40),
-            Dock = DockStyle.Fill,
-            BackColor = BackdropPalette.Surface,
-            Margin = new Padding(0, 0, 0, 6)
-        };
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
-        row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        var label = new Label
-        {
-            Text = labelText,
-            AutoSize = true,
-            ForeColor = BackdropPalette.Muted,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Anchor = AnchorStyles.Left,
-            Margin = new Padding(0)
-        };
-        numeric.Dock = DockStyle.Fill;
-        numeric.Height = 38;
-        numeric.MinimumSize = new Size(0, 38);
-        numeric.Font = new Font("Segoe UI", 10F);
-        numeric.Margin = new Padding(0);
-        numeric.RefreshAccessibility();
-        row.Controls.Add(label, 0, 0);
-        row.Controls.Add(numeric, 1, 0);
+        row.Controls.Add(field, 1, 0);
         return row;
     }
 
@@ -244,6 +215,8 @@ internal sealed class BackgroundSettingsDialog : Form
         ];
         private readonly TextBox _hexEditor;
         private readonly Panel _swatch;
+        private readonly TableLayoutPanel _controls;
+        private readonly BackdropButton _advancedButton;
         private readonly string _labelText;
         private Color _color;
 
@@ -255,16 +228,17 @@ internal sealed class BackgroundSettingsDialog : Form
         {
             _labelText = labelText;
             ColumnCount = 2;
-            RowCount = 2;
-            Width = 460;
-            Height = 68;
-            MinimumSize = new Size(460, 68);
+            RowCount = 3;
+            Width = FieldWidth;
+            Height = FieldHeight + 8 + 26;
+            MinimumSize = new Size(FieldWidth, FieldHeight + 8 + 26);
             Dock = DockStyle.Fill;
             BackColor = BackdropPalette.Surface;
-            Margin = new Padding(0, 0, 0, 6);
-            ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            Margin = new Padding(0, 0, 0, 8);
+            ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, LabelColumnWidth));
             ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+            RowStyles.Add(new RowStyle(SizeType.Absolute, FieldHeight));
+            RowStyles.Add(new RowStyle(SizeType.Absolute, 8));
             RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
 
             var label = new Label
@@ -276,7 +250,7 @@ internal sealed class BackgroundSettingsDialog : Form
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(0)
             };
-            var controls = new TableLayoutPanel
+            _controls = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 3,
@@ -284,46 +258,44 @@ internal sealed class BackgroundSettingsDialog : Form
                 BackColor = BackdropPalette.Surface,
                 Margin = Padding.Empty
             };
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34));
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
-            controls.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            _controls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34));
+            _controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
+            _controls.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             _hexEditor = new TextBox
             {
-                Dock = DockStyle.Fill,
                 CharacterCasing = CharacterCasing.Upper,
                 MaxLength = 7,
                 BackColor = BackdropPalette.Field,
                 ForeColor = BackdropPalette.Text,
-                BorderStyle = BorderStyle.FixedSingle,
                 AccessibleName = $"{labelText} hex color",
                 AccessibleDescription = "Enter an opaque color in the format #RRGGBB."
             };
             _swatch = new Panel
             {
-                Dock = DockStyle.Fill,
-                Margin = new Padding(6, 6, 0, 6),
+                Size = new Size(24, 24),
+                Anchor = AnchorStyles.None,
+                Margin = Padding.Empty,
                 BorderStyle = BorderStyle.FixedSingle,
                 AccessibleName = $"{labelText} swatch"
             };
-            var choose = new BackdropButton("Advanced")
+            _advancedButton = new BackdropButton("Advanced")
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(8, 2, 0, 2),
+                Margin = new Padding(8, 0, 0, 0),
                 AccessibleName = $"Open advanced picker for {labelText.ToLowerInvariant()}"
             };
-            choose.Click += (_, _) => ChooseColor();
-            controls.Controls.Add(_hexEditor, 0, 0);
-            controls.Controls.Add(_swatch, 1, 0);
-            controls.Controls.Add(choose, 2, 0);
+            _advancedButton.Click += (_, _) => ChooseColor();
+            _controls.Controls.Add(new BackdropTextInputHost(_hexEditor) { Dock = DockStyle.Fill }, 0, 0);
+            _controls.Controls.Add(_swatch, 1, 0);
+            _controls.Controls.Add(_advancedButton, 2, 0);
 
             var paletteLabel = new Label
             {
                 Text = "Quick colors",
-                AutoSize = true,
                 ForeColor = BackdropPalette.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
                 Margin = Padding.Empty
             };
             var palette = new FlowLayoutPanel
@@ -339,9 +311,9 @@ internal sealed class BackgroundSettingsDialog : Form
                 var color = ColorTranslator.FromHtml(hex);
                 var swatchButton = new Button
                 {
-                    Width = 23,
-                    Height = 21,
-                    Margin = new Padding(0, 2, 5, 1),
+                    Width = 22,
+                    Height = 22,
+                    Margin = new Padding(0, 2, 6, 2),
                     FlatStyle = FlatStyle.Flat,
                     UseVisualStyleBackColor = false,
                     BackColor = color,
@@ -355,11 +327,38 @@ internal sealed class BackgroundSettingsDialog : Form
             }
 
             Controls.Add(label, 0, 0);
-            Controls.Add(controls, 1, 0);
-            Controls.Add(paletteLabel, 0, 1);
-            Controls.Add(palette, 1, 1);
+            Controls.Add(_controls, 1, 0);
+            Controls.Add(paletteLabel, 0, 2);
+            Controls.Add(palette, 1, 2);
             _hexEditor.TextChanged += HexEditor_TextChanged;
             SetColor(colorHex);
+            UpdateAdvancedButtonColumnWidth();
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            UpdateAdvancedButtonColumnWidth();
+        }
+
+        protected override void OnDpiChangedAfterParent(EventArgs e)
+        {
+            base.OnDpiChangedAfterParent(e);
+            UpdateAdvancedButtonColumnWidth();
+        }
+
+        private void UpdateAdvancedButtonColumnWidth()
+        {
+            if (_controls.ColumnStyles.Count < 3)
+                return;
+
+            var measuredTextWidth = TextRenderer.MeasureText(_advancedButton.Text, _advancedButton.Font,
+                Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix).Width;
+            var paintTextInset = 16; // BackdropButton draws text inside an 8 px inset on each side.
+            var requiredButtonWidth = measuredTextWidth + paintTextInset + _advancedButton.Margin.Horizontal + 2;
+            var scaledMinimum = (int)Math.Ceiling(104d * DeviceDpi / 96d);
+            _controls.ColumnStyles[2].Width = Math.Max(scaledMinimum, requiredButtonWidth);
+            _controls.PerformLayout();
         }
 
         private void ChooseColor()

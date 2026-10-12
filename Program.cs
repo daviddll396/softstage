@@ -13,6 +13,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        BackdropTypography.Initialize();
         ApplicationConfiguration.Initialize();
         if (args.Length > 0 && args[0].Equals("--generate", StringComparison.OrdinalIgnoreCase))
             return Generate(args.Skip(1).ToArray());
@@ -20,13 +21,13 @@ internal static class Program
             return SelfCheck(args.Skip(1).ToArray());
         if (args.Length > 0)
         {
-            MessageBox.Show(null, "Usage: Backdrop.exe [--generate image1 [image2 ...] | --self-check [output-folder]]", "Backdrop", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(null, "Softstage command usage: Backdrop.exe [--generate image1 [image2 ...] | --self-check [output-folder]]", "Softstage", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 2;
         }
 
         var loaded = SettingsStore.Load();
         if (loaded.Warning is not null)
-            MessageBox.Show(null, loaded.Warning, "Backdrop preferences", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(null, loaded.Warning, "Softstage preferences", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         Application.Run(new MainForm(loaded.Settings));
         return 0;
     }
@@ -37,7 +38,7 @@ internal static class Program
         {
             var loaded = SettingsStore.Load();
             if (loaded.Warning is not null)
-                MessageBox.Show(null, loaded.Warning, "Backdrop preferences", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(null, loaded.Warning, "Softstage preferences", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             var output = BackdropRenderer.Generate(paths, loaded.Settings);
             if (!WriteCliOutput(output))
                 Application.Run(new GenerateCompletionToast(output));
@@ -48,7 +49,7 @@ internal static class Program
             var message = ex is IOException or UnauthorizedAccessException
                 ? $"Check that the selected images are available and that the first image's folder is writable.\n\n{ex.Message}"
                 : ex.Message;
-            MessageBox.Show(null, message, "Backdrop could not generate the image", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(null, message, "Softstage could not generate the image", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }
@@ -110,7 +111,7 @@ internal sealed class GenerateCompletionToast : Form
     public GenerateCompletionToast(string output)
     {
         _output = Path.GetFullPath(output);
-        Text = "Backdrop created an image";
+        Text = "Softstage created an image";
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
@@ -119,8 +120,9 @@ internal sealed class GenerateCompletionToast : Form
         Size = new Size(360, 152);
         BackColor = BackdropPalette.Surface;
         ForeColor = BackdropPalette.Text;
+        Font = BackdropTypography.Create(9.5F);
         Padding = new Padding(1);
-        AccessibleName = "Backdrop image created";
+        AccessibleName = "Softstage image created";
 
         var content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(14, 10, 14, 10), Margin = Padding.Empty, BackColor = BackdropPalette.Surface };
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
@@ -130,7 +132,7 @@ internal sealed class GenerateCompletionToast : Form
         var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = BackdropPalette.Surface };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 28));
-        var title = new Label { Text = "PNG created", Dock = DockStyle.Fill, Margin = Padding.Empty, ForeColor = BackdropPalette.Text, Font = new Font("Segoe UI", 11F, FontStyle.Bold) };
+        var title = new Label { Text = "PNG created", Dock = DockStyle.Fill, Margin = Padding.Empty, ForeColor = BackdropPalette.Text, Font = BackdropTypography.Create(11F, FontStyle.Bold) };
         var closeButton = new BackdropButton("×")
         {
             Width = 28,
@@ -282,7 +284,7 @@ internal sealed class GenerateCompletionToast : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"Could not open the selected location.\n\n{ex.Message}", "Backdrop", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, $"Could not open the selected location.\n\n{ex.Message}", "Softstage", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }
@@ -296,6 +298,13 @@ internal static class SelfCheckRunner
         var runFolder = Path.Combine(root, $"run-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}");
         var inputFolder = Path.Combine(runFolder, "inputs");
         Directory.CreateDirectory(inputFolder);
+
+        var fontNames = BackdropTypography.GetBackendFamilyNames();
+        Assert(fontNames.GdiPlusRegular == BackdropTypography.FamilyName &&
+            fontNames.GdiPlusBold == BackdropTypography.FamilyName &&
+            fontNames.GdiRegular == BackdropTypography.FamilyName &&
+            fontNames.GdiBold == BackdropTypography.FamilyName && BackdropTypography.HasEmbeddedLicense,
+            "Embedded Google Sans Flex regular and bold faces load in GDI+ and GDI with the OFL license");
 
         var sourceBitmaps = BackdropRenderer.CreateSampleInputs(inputFolder);
         try
@@ -352,33 +361,33 @@ internal static class SelfCheckRunner
             Assert(Math.Abs((centeredGrid[^2].Left + centeredGrid[^1].Right) / 2 - gridCanvas.Width / 2f) < 0.1f, "Grid centers its final incomplete row");
 
             var single = BackdropRenderer.Generate([paths[0]], settings);
-            Assert(Path.GetFileName(single) == "portrait one-backdrop.png", "Single-image output name");
+            Assert(Path.GetFileName(single) == "portrait one-softstage.png", "Single-image output name");
             var singleBounds = BackdropRenderer.GetImageBounds([new Size(420, 680)], settings)[0];
             Assert(Math.Abs(singleBounds.Height - 1080 * 0.8f) < 0.1f && singleBounds.Width <= 1920 * 0.8f + 0.1f, "Single image fills the 80-percent content bound without cropping");
             var singleCollision = BackdropRenderer.Generate([paths[0]], settings);
-            Assert(Path.GetFileName(singleCollision) == "portrait one-backdrop-2.png", "Collision-safe single-image name");
+            Assert(Path.GetFileName(singleCollision) == "portrait one-softstage-2.png", "Collision-safe single-image name");
             AssertImageSize(single, 1920, 1080);
 
             var portraitBounds = BackdropRenderer.GetImageBounds([new Size(420, 680), new Size(420, 560)], settings);
             Assert(portraitBounds.Count == 2 && Math.Abs(portraitBounds[0].Height - portraitBounds[1].Height) < 0.1f, "Portrait row uses equal heights");
             var portraits = BackdropRenderer.Generate(paths[..2], settings);
-            Assert(Path.GetFileName(portraits) == "backdrop-composition.png", "Portrait selection produces one composition");
+            Assert(Path.GetFileName(portraits) == "softstage-composition.png", "Portrait selection produces one composition");
             AssertImageSize(portraits, 1920, 1080);
             var threePortraitBounds = BackdropRenderer.GetImageBounds(
                 [new Size(420, 680), new Size(420, 560), new Size(440, 700)], settings);
             Assert(threePortraitBounds.Count == 3 && threePortraitBounds.Max(bounds => bounds.Height) - threePortraitBounds.Min(bounds => bounds.Height) < 0.1f, "Three portraits share one equal-height row");
             var threePortraits = BackdropRenderer.Generate([paths[0], paths[1], paths[3]], settings);
-            Assert(Path.GetFileName(threePortraits) == "backdrop-composition-2.png", "Three-portrait row is saved as one composition");
+            Assert(Path.GetFileName(threePortraits) == "softstage-composition-2.png", "Three-portrait row is saved as one composition");
             AssertImageSize(threePortraits, 1920, 1080);
 
             var mixed = BackdropRenderer.Generate(paths, settings);
-            Assert(Path.GetFileName(mixed) == "backdrop-composition-3.png", "Mixed selection produces one collision-safe composition");
+            Assert(Path.GetFileName(mixed) == "softstage-composition-3.png", "Mixed selection produces one collision-safe composition");
             AssertImageSize(mixed, 1920, 1080);
 
             using (var cancelledExport = new CancellationTokenSource())
             {
                 cancelledExport.Cancel();
-                var cancelledOutput = Path.Combine(inputFolder, "landscape-backdrop.png");
+                var cancelledOutput = Path.Combine(inputFolder, "landscape-softstage.png");
                 ExpectThrows<OperationCanceledException>(
                     () => BackdropRenderer.Generate([paths[2]], settings, cancelledExport.Token),
                     "Canceled export exits before creating a PNG");
@@ -401,8 +410,11 @@ internal static class SelfCheckRunner
             sampleAutoSettings.CanvasRatio = CanvasRatio.Auto;
             sampleAutoSettings.Layout = CompositionLayout.Auto;
             using (var sampleRow = BackdropRenderer.CreateSamplePreview(sampleAutoSettings, 640))
-                Assert(sampleRow.Width == 640 && Math.Abs(sampleRow.Width / (double)sampleRow.Height - 1.58) < 0.02,
-                    "Three portrait sample screens use the shared Auto row composition");
+            {
+                var expectedSampleRowRatio = Math.Clamp(3 * (1500d / 3248) + 0.04 * 2, 0.5, 3);
+                Assert(sampleRow.Width == 640 && Math.Abs(sampleRow.Width / (double)sampleRow.Height - expectedSampleRowRatio) < 0.02,
+                    "Three portrait app screenshots use the shared Auto row composition");
+            }
 
             CheckBackgroundModes(settings, runFolder, paths[0]);
             CheckAutomaticPalette(settings, runFolder);
@@ -535,6 +547,39 @@ internal static class SelfCheckRunner
                     Assert(combos[0].DroppedDown && combos[0].PopupCheckmarkCount == 1 &&
                         ((ListBox)combos[0].PopupList).Items.Count == combos[0].Items.Count,
                         "Custom background mode popup opens with one checked option");
+                    var modeFieldOrigin = combos[0].PointToScreen(Point.Empty);
+                    var modePopupBounds = combos[0].PopupBounds;
+                    var expectedPopupGap = Math.Max(3, (int)Math.Round(4 * combos[0].DeviceDpi / 96f));
+                    Assert(combos[0].HasRoundedPopupRegion && modePopupBounds.Width == combos[0].Width &&
+                        modePopupBounds.Left == modeFieldOrigin.X &&
+                        modePopupBounds.Top - modeFieldOrigin.Y - combos[0].Height == expectedPopupGap,
+                        "Dropdown popup keeps the field width and left edge, rounded border, and small scaled gap");
+                    var popupRegion = CreateRectRgn(0, 0, 0, 0);
+                    if (popupRegion == IntPtr.Zero)
+                        throw new InvalidOperationException("Self-check failed: a region for the dropdown shape check could not be created.");
+                    try
+                    {
+                        var regionType = GetWindowRgn(combos[0].PopupSurface.Handle, popupRegion);
+                        var roundedInset = Math.Max(2, (int)Math.Round(7 * combos[0].DeviceDpi / 96f * 0.75));
+                        Assert(regionType != 0 && !PtInRegion(popupRegion, 0, 0) &&
+                            PtInRegion(popupRegion, roundedInset, roundedInset),
+                            "Open dropdown HWND excludes its outside corner and includes the rounded interior");
+                    }
+                    finally
+                    {
+                        _ = DeleteObject(popupRegion);
+                    }
+
+                    using (var popupFrame = CaptureControl(combos[0].PopupSurface))
+                    using (var fieldFrame = CaptureControl(combos[0]))
+                    using (var composite = new Bitmap(fieldFrame.Width, fieldFrame.Height + expectedPopupGap + popupFrame.Height, PixelFormat.Format32bppArgb))
+                    using (var graphics = Graphics.FromImage(composite))
+                    {
+                        graphics.Clear(backgroundDialog.BackColor);
+                        graphics.DrawImageUnscaled(fieldFrame, 0, 0);
+                        graphics.DrawImageUnscaled(popupFrame, 0, fieldFrame.Height + expectedPopupGap);
+                        composite.Save(Path.Combine(runFolder, "background-editor-dropdown-popup.png"), ImageFormat.Png);
+                    }
                     using (var popupImage = CaptureControl(combos[0].PopupList))
                     {
                         popupImage.Save(Path.Combine(runFolder, "background-editor-dropdown-options.png"), ImageFormat.Png);
@@ -648,7 +693,7 @@ internal static class SelfCheckRunner
             File.Copy(mixed, Path.Combine(runFolder, "render-preview.png"));
             var report = string.Join(Environment.NewLine,
             [
-                "Backdrop self-check passed.",
+                "Softstage self-check passed.",
                 "Checked: ratio defaults and presets, source aspect, row/grid order and centering, portrait layout, sample preview dimensions and Auto row, bounded preview cache reuse and file-change invalidation, automatic and custom colors, 0/20/100 percent automatic lightening, setting bounds and legacy defaults, background draft apply and cancel, custom advanced picker, dropdown selection and dismissal with one check mark, background patterns, gradient dithering and foreground preservation, scaled image corners and unchanged center pixels, live editor visibility and draft events, toast native region and curved border, collision-safe names, source preservation, image-count limit, enum validation, canceled preview/export cleanup, remove/clear list actions, empty-list hint visibility, preference round trip, rounded/dark control chrome, layout selection events, bounded editable numeric selector behavior, and 960x720/800x600 captures.",
                 $"Sample: {sampleFile}",
                 $"Render: {Path.Combine(runFolder, "render-preview.png")}",
@@ -894,7 +939,7 @@ internal static class SelfCheckRunner
     {
         var output = Path.Combine(runFolder,
             "an intentionally long folder name that should show its full value in the tooltip",
-            "backdrop-composition-final-preview-with-a-long-name.png");
+            "softstage-composition-final-preview-with-a-long-name.png");
         using var toast = new GenerateCompletionToast(output) { Opacity = 0 };
         toast.Show();
         Application.DoEvents();
@@ -1337,26 +1382,12 @@ internal static class SelfCheckRunner
             CheckDarkPixel(failures, "Canvas ratio field has no bright square corners", bitmap.GetPixel(1, 1));
         }
 
-        var edgeEditor = GetField<BackdropNumberSelector>(form, "_outputWidth");
-        Assert(!typeof(NumericUpDown).IsAssignableFrom(edgeEditor.GetType()),
-            "Long edge uses a custom horizontal selector instead of the native numeric spinner");
-        var edgeParts = Descendants(edgeEditor).ToArray();
-        var edgeDecrease = edgeParts.OfType<BackdropChevronButton>().Single(button => !button.PointsRight);
-        var edgeIncrease = edgeParts.OfType<BackdropChevronButton>().Single(button => button.PointsRight);
-        var edgeText = edgeParts.OfType<TextBox>().Single();
-        Assert(edgeEditor.Minimum == 640 && edgeEditor.Maximum == 4096 && edgeEditor.Increment == 160 &&
-            edgeEditor.ThousandsSeparator && edgeText.Text == 1920.ToString("N0", CultureInfo.CurrentCulture),
-            "Long edge keeps its bounds, step, and grouped editable value");
-        Assert(edgeDecrease.Left < edgeText.Left && edgeText.Right < edgeIncrease.Left &&
-            edgeDecrease.AccessibleName == "Decrease Canvas long edge in pixels" &&
-            edgeIncrease.AccessibleName == "Increase Canvas long edge in pixels" &&
-            edgeText.AccessibleName == edgeEditor.AccessibleName && edgeText.TabStop,
-            "Long edge has accessible decrease and increase controls around its editable center");
-        using (var bitmap = CaptureControl(edgeEditor))
-        {
-            Assert(bitmap.GetPixel(0, 0) != bitmap.GetPixel(bitmap.Width / 2, bitmap.Height / 2),
-                "Long edge selector has rounded corners around its horizontal field");
-        }
+        var edgeEditor = GetField<BackdropDropdown>(form, "_outputWidth");
+        var expectedOutputPresets = new[] { "720p (1280 px)", "1080p (1920 px)", "2K (2560 px)", "3K (3072 px)", "4K (3840 px)" };
+        Assert(edgeEditor.Items.SequenceEqual(expectedOutputPresets) && edgeEditor.SelectedIndex == 1 &&
+            edgeEditor.AccessibleRole == AccessibleRole.ComboBox && edgeEditor.AccessibleName == "Output size preset" &&
+            (edgeEditor.AccessibleDescription ?? "").Contains("long edge", StringComparison.OrdinalIgnoreCase),
+            "Output size offers accessible named presets with long-edge pixel values");
 
         var layout = GetField<Control>(form, "_layout");
         var selectedIndex = layout.GetType().GetProperty("SelectedIndex")
@@ -1386,7 +1417,6 @@ internal static class SelfCheckRunner
         var shadowEditor = GetField<BackdropNumberSelector>(form, "_shadow");
         foreach (var (name, editor) in new[]
         {
-            ("Long edge", edgeEditor),
             ("Padding", padding),
             ("Shadow", shadowEditor)
         })
@@ -1432,8 +1462,6 @@ internal static class SelfCheckRunner
         paddingButtons.Single(button => button.PointsRight).PerformClick();
         Assert(padding.Value == 18 && paddingText.Text == "18",
             "Fractional input is discarded for whole-number selectors before stepping");
-        ExpectThrows<ArgumentOutOfRangeException>(() => edgeEditor.Value = 4097,
-            "Long edge rejects a value beyond its maximum");
 
         padding.Value = originalValue;
         Assert(padding.HandleEditorKey(Keys.Up), "Up Arrow is handled by the selector editor");

@@ -126,5 +126,5 @@ internal static class SettingsStore
 
     private static SettingsLoad Corrupt() => new(
         new AppSettings(),
-        "Backdrop could not read its saved preferences. It will use the defaults until you save new preferences.");
+        "Softstage could not read its saved preferences. It will use the defaults until you save new preferences.");
 }

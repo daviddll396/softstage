@@ -17,17 +17,25 @@ internal sealed class MainForm : Form
     private static readonly Color PreviewColor = Color.FromArgb(34, 35, 40);
     private static readonly Color AccentColor = BackdropPalette.Accent;
     private static readonly Color AccentTextColor = BackdropPalette.AccentText;
+    private static readonly (string Label, int Pixels)[] OutputSizePresets =
+    [
+        ("720p (1280 px)", 1280),
+        ("1080p (1920 px)", 1920),
+        ("2K (2560 px)", 2560),
+        ("3K (3072 px)", 3072),
+        ("4K (3840 px)", 3840)
+    ];
 
     private readonly BackdropNumberSelector _padding = new() { Minimum = 0, Maximum = 25, Increment = 1 };
     private readonly BackdropNumberSelector _shadow = new() { Minimum = 0, Maximum = 40, Increment = 2 };
-    private readonly BackdropNumberSelector _outputWidth = new() { Minimum = 640, Maximum = 4096, Increment = 160, ThousandsSeparator = true };
+    private readonly BackdropDropdown _outputWidth = new();
     private readonly ToolTip _settingTooltips = new();
     private readonly BackdropDropdown _ratio = new();
     private readonly SegmentedChoiceControl _layout = new("Auto", "Row", "Grid");
     private readonly ListBox _imageList = new() { IntegralHeight = false, SelectionMode = SelectionMode.One, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 26, Margin = Padding.Empty };
     private readonly PictureBox _preview = new() { SizeMode = PictureBoxSizeMode.Zoom, BackColor = PreviewColor, Visible = false };
     private readonly SmallBusySpinner _previewSpinner = new() { Visible = false };
-    private readonly Panel _previewFrame = new() { BackColor = Color.FromArgb(42, 43, 48), Padding = new Padding(14) };
+    private readonly Panel _previewFrame = new() { BackColor = Color.FromArgb(42, 43, 48), Padding = new Padding(8) };
     private readonly Label _previewPlaceholder = new() { Text = "Preparing preview…", TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill, ForeColor = MutedColor, BackColor = PreviewColor };
     private readonly Label _previewCaption = new() { AutoSize = true, ForeColor = MutedColor, Text = "A sample composition will appear here." };
     private readonly Label _previewImageCount = new() { AutoSize = false, ForeColor = MutedColor, Text = "SAMPLE" };
@@ -52,10 +60,41 @@ internal sealed class MainForm : Form
         AccessibleName = "Add or drop up to nine images"
     };
     private readonly Button _generateButton = MakeButton("Create PNG", primary: true);
+    private readonly SmallBusySpinner _exportSpinner = new()
+    {
+        Size = new Size(16, 16),
+        Visible = false,
+        AccessibleName = "PNG export in progress",
+        AccessibleDescription = "The full-resolution PNG is being created.",
+        AccessibleRole = AccessibleRole.ProgressBar
+    };
+    private readonly BackdropButton _cancelExportButton = new("Cancel")
+    {
+        Visible = false,
+        AccessibleName = "Cancel PNG creation",
+        AccessibleDescription = "Cancel the current PNG export."
+    };
+    private readonly TableLayoutPanel _exportActions = new()
+    {
+        Dock = DockStyle.Fill,
+        ColumnCount = 3,
+        RowCount = 1,
+        BackColor = WindowColor,
+        Margin = Padding.Empty,
+        Size = new Size(0, 44),
+        MinimumSize = new Size(0, 44)
+    };
     private readonly Button _shortcutButton = MakeButton("Enable right-click shortcut");
     private readonly Button _openImageButton = MakeButton("Open image");
     private readonly Button _openFolderButton = MakeButton("Show folder");
-    private readonly FlowLayoutPanel _outputActions = new() { Dock = DockStyle.Fill, WrapContents = false, Visible = false, Margin = Padding.Empty };
+    private readonly FlowLayoutPanel _outputActions = new()
+    {
+        Dock = DockStyle.Fill,
+        AutoSize = false,
+        WrapContents = false,
+        Visible = false,
+        Margin = Padding.Empty
+    };
     private readonly System.Windows.Forms.Timer _previewTimer = new() { Interval = 200 };
     private readonly SemaphoreSlim _previewGate = new(1, 1);
     private readonly BackdropRenderer.PreviewImageCache _previewImageCache = new();
@@ -65,6 +104,8 @@ internal sealed class MainForm : Form
     private string[] _imagePaths = [];
     private string? _generatedOutput;
     private int _previewRequest;
+    private int _outputWidthPixels = 1920;
+    private bool _hasCustomOutputWidth;
     private bool _isGenerating;
     private bool _isShellMenuChanging;
     private bool _shellMenuScriptsAvailable;
@@ -78,21 +119,30 @@ internal sealed class MainForm : Form
     public MainForm(AppSettings settings, IReadOnlyList<string>? initialPaths = null, string? previewFile = null)
     {
         var initialSettings = settings.IsValid() ? settings.Copy() : new AppSettings();
-        Text = "Backdrop";
+        Text = "Softstage";
         Icon = LoadWindowIcon();
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = SizeFromClientSize(new Size(800, 600));
         ClientSize = new Size(960, 720);
-        Font = new Font("Segoe UI", 9.5F);
+        Font = BackdropTypography.Create(9.5F);
         BackColor = WindowColor;
         ForeColor = TextColor;
-        AccessibleName = "Backdrop image composer";
+        AccessibleName = "Softstage image composer";
         AllowDrop = true;
 
         _padding.Value = initialSettings.PaddingPercent;
         _shadow.Value = (decimal)Math.Round(initialSettings.ShadowStrength * 100);
-        _outputWidth.Value = initialSettings.OutputWidth;
+        _outputWidthPixels = initialSettings.OutputWidth;
+        _outputWidth.Items.AddRange(OutputSizePresets.Select(preset => preset.Label).ToArray());
+        var outputPresetIndex = Array.FindIndex(OutputSizePresets, preset => preset.Pixels == initialSettings.OutputWidth);
+        if (outputPresetIndex < 0)
+        {
+            _outputWidth.Items.Add($"Custom ({initialSettings.OutputWidth:N0} px)");
+            _hasCustomOutputWidth = true;
+            outputPresetIndex = _outputWidth.Items.Count - 1;
+        }
+        _outputWidth.SelectedIndex = outputPresetIndex;
         _backgroundMode = initialSettings.BackgroundMode;
         _backgroundColor1Hex = initialSettings.BackgroundColor1Hex;
         _backgroundColor2Hex = initialSettings.BackgroundColor2Hex;
@@ -201,21 +251,21 @@ internal sealed class MainForm : Form
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(18),
+            Padding = new Padding(8),
             ColumnCount = 1,
             RowCount = 3,
             BackColor = WindowColor
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         Controls.Add(root);
 
         root.Controls.Add(BuildHeader(), 0, 0);
-        var workspace = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Margin = new Padding(0, 10, 0, 10) };
-        workspace.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55));
-        workspace.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45));
+        var workspace = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Margin = Padding.Empty };
+        workspace.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        workspace.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300));
         workspace.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         workspace.Controls.Add(BuildPreviewCard(), 0, 0);
         workspace.Controls.Add(BuildSidebar(), 1, 0);
@@ -225,33 +275,38 @@ internal sealed class MainForm : Form
 
     private Control BuildHeader()
     {
-        var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Margin = Padding.Empty };
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 53));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 47));
-        header.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var brand = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = WindowColor };
+        var header = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Margin = Padding.Empty };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 452));
+        header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var brand = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 2, BackColor = WindowColor, Padding = Padding.Empty, Margin = new Padding(0, 0, 0, 8) };
+        brand.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         brand.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         brand.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        brand.Controls.Add(new Label { Text = "Backdrop", AutoSize = true, ForeColor = TextColor, Font = new Font(Font.FontFamily, 18, FontStyle.Bold), Margin = Padding.Empty }, 0, 0);
-        brand.Controls.Add(new Label { Text = "A clean composition from your images.", AutoSize = true, ForeColor = MutedColor, Margin = Padding.Empty }, 0, 1);
+        brand.Controls.Add(new Label { Text = "Softstage", AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, ForeColor = TextColor, Font = new Font(Font.FontFamily, 16, FontStyle.Bold), Margin = Padding.Empty }, 0, 0);
+        brand.Controls.Add(new Label { Text = "Compose on your device.", AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, ForeColor = MutedColor, Margin = Padding.Empty }, 0, 1);
         header.Controls.Add(brand, 0, 0);
 
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
             BackColor = WindowColor,
-            Padding = new Padding(0, 7, 0, 0),
+            Padding = new Padding(0, 9, 0, 0),
             Margin = Padding.Empty
         };
         var saveButton = MakeButton("Save preferences");
-        saveButton.Width = 138;
+        saveButton.Width = 160;
         saveButton.Height = 34;
+        saveButton.Margin = Padding.Empty;
         saveButton.Click += (_, _) => SavePreferences();
         _shortcutButton.AutoSize = false;
         _shortcutButton.Width = 204;
         _shortcutButton.Height = 34;
+        _shortcutButton.Margin = new Padding(0, 0, 8, 0);
         _shortcutButton.Click += (_, _) => ToggleExplorerMenu();
         actions.Controls.Add(saveButton);
         actions.Controls.Add(_shortcutButton);
@@ -262,10 +317,12 @@ internal sealed class MainForm : Form
     private Control BuildPreviewCard()
     {
         var card = CreateCard();
-        card.Margin = new Padding(0, 0, 14, 0);
+        ApplyRoundedCorners(card, 10);
+        card.Margin = new Padding(0, 0, 8, 0);
         var body = CreateCardInterior();
+        ApplyRoundedCorners(body, 10);
         card.Controls.Add(body);
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = SurfaceColor, Padding = new Padding(15) };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = SurfaceColor, Padding = new Padding(10) };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -283,10 +340,10 @@ internal sealed class MainForm : Form
         heading.Controls.Add(_previewImageCount, 2, 0);
 
         var backgroundActions = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = SurfaceColor, Margin = Padding.Empty };
-        backgroundActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112));
+        backgroundActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128));
         backgroundActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         backgroundActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        _backgroundButton.Width = 104;
+        _backgroundButton.Width = 120;
         _backgroundButton.Height = 32;
         _backgroundButton.Dock = DockStyle.Fill;
         _backgroundButton.Margin = new Padding(0, 3, 8, 3);
@@ -306,6 +363,7 @@ internal sealed class MainForm : Form
         _preview.Dock = DockStyle.Fill;
         _preview.AccessibleName = "Composition preview";
         _previewFrame.Dock = DockStyle.Fill;
+        ApplyRoundedCorners(_previewFrame, 8);
         _previewFrame.AccessibleName = "Preview image area";
         _previewFrame.Controls.Add(_preview);
         _previewFrame.Controls.Add(_previewPlaceholder);
@@ -320,98 +378,116 @@ internal sealed class MainForm : Form
 
     private Control BuildSidebar()
     {
-        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = WindowColor, Margin = Padding.Empty };
+        var sidebar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, BackColor = SurfaceColor, Padding = new Padding(8), Margin = Padding.Empty };
+        ApplyRoundedCorners(sidebar, 10);
         sidebar.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 15));
         sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var settingsCard = BuildSettingsCard();
-        settingsCard.Dock = DockStyle.Top;
-        settingsCard.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         sidebar.Controls.Add(settingsCard, 0, 0);
+        sidebar.Controls.Add(new Panel { Dock = DockStyle.Fill, Height = 1, BackColor = BorderColor, Margin = new Padding(0, 7, 0, 7) }, 0, 1);
         var images = BuildImagesCard();
-        images.Margin = new Padding(0, 12, 0, 0);
-        sidebar.Controls.Add(images, 0, 1);
+        sidebar.Controls.Add(images, 0, 2);
         return sidebar;
     }
 
     private Control BuildSettingsCard()
     {
-        var card = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = SurfaceColor, Padding = Padding.Empty, Margin = Padding.Empty };
-        var content = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 1, BackColor = SurfaceColor, Padding = new Padding(10), Margin = Padding.Empty };
-        content.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var card = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 3, BackColor = SurfaceColor, Margin = Padding.Empty };
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 25));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 132));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+        card.Controls.Add(SectionLabel("Composition", 10F), 0, 0);
 
-        var fields = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 2, RowCount = 3, BackColor = SurfaceColor, Margin = Padding.Empty };
-        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        for (var row = 0; row < 3; row++)
-            fields.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var fields = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, BackColor = SurfaceColor, Margin = Padding.Empty };
+        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        fields.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        fields.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        fields.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         var ratioField = MakeSettingField("Canvas ratio", _ratio);
         fields.Controls.Add(ratioField, 0, 0);
         var layoutField = MakeSettingField("Layout", _layout);
-        fields.Controls.Add(layoutField, 1, 0);
-        _outputWidth.AccessibleName = "Canvas long edge in pixels";
-        _outputWidth.AccessibleDescription = "Output canvas long edge in pixels, from 640 to 4096.";
+        fields.Controls.Add(layoutField, 0, 1);
+        _outputWidth.AccessibleName = "Output size preset";
+        _outputWidth.AccessibleDescription = "Each preset is the canvas long edge in pixels. The selected canvas ratio sets the other edge. Existing custom sizes remain in use until you choose a preset.";
         _padding.AccessibleName = "Padding percentage";
         _padding.AccessibleDescription = "Space around each picture, as a percentage of the canvas.";
         _shadow.AccessibleName = "Shadow strength";
         _shadow.AccessibleDescription = "Picture shadow strength, from 0 to 40 percent.";
-        _settingTooltips.SetToolTip(_outputWidth, "Canvas long edge in pixels (640–4096)." );
+        _settingTooltips.SetToolTip(_outputWidth, "Choose the canvas long edge in pixels. Canvas ratio determines the other edge.");
         _settingTooltips.SetToolTip(_padding, "Padding around each picture, as a percent of the canvas.");
         _settingTooltips.SetToolTip(_shadow, "Shadow strength, as a percent.");
-        var sizeField = MakeSettingField("Size (px)", _outputWidth);
-        fields.Controls.Add(sizeField, 0, 1);
-        fields.SetColumnSpan(sizeField, 2);
-        fields.Controls.Add(MakeSettingField("Padding (%)", _padding), 0, 2);
-        fields.Controls.Add(MakeSettingField("Shadow (%)", _shadow), 1, 2);
-        content.Controls.Add(fields, 0, 0);
-        card.Controls.Add(content);
+        var sizeField = MakeSettingField("Output size", _outputWidth);
+        fields.Controls.Add(sizeField, 0, 2);
+        card.Controls.Add(fields, 0, 1);
+
+        var pairedFields = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, BackColor = SurfaceColor, Margin = new Padding(0, 4, 0, 0) };
+        pairedFields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        pairedFields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 8));
+        pairedFields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        pairedFields.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
+        pairedFields.Controls.Add(MakeSettingField("Padding (%)", _padding, inlineLabel: false), 0, 0);
+        pairedFields.Controls.Add(MakeSettingField("Shadow (%)", _shadow, inlineLabel: false), 2, 0);
+        card.Controls.Add(pairedFields, 0, 2);
         return card;
     }
 
     private Control BuildImagesCard()
     {
-        var card = CreateCard();
-        var body = CreateCardInterior();
-        card.Controls.Add(body);
-        var content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = SurfaceColor, Padding = new Padding(10) };
-        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        var content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, BackColor = SurfaceColor, Margin = Padding.Empty };
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 8));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
 
-        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, BackColor = SurfaceColor, Margin = Padding.Empty };
-        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 38));
+        var heading = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = SurfaceColor, Margin = Padding.Empty };
         heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 68));
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 44));
         heading.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        heading.Controls.Add(SectionLabel("Images", 10F), 0, 0);
         _selectedCount.Dock = DockStyle.Fill;
-        _selectedCount.TextAlign = ContentAlignment.MiddleCenter;
-        heading.Controls.Add(_selectedCount, 0, 0);
-        var addButton = MakeButton("Add images");
+        _selectedCount.TextAlign = ContentAlignment.MiddleRight;
+        _selectedCount.Font = BackdropTypography.Create(8.5F);
+        heading.Controls.Add(_selectedCount, 1, 0);
+
+        var actions = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = SurfaceColor, Margin = Padding.Empty };
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        actions.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var addButton = MakeButton("Add images", primary: true);
         addButton.Dock = DockStyle.Fill;
-        addButton.Margin = new Padding(4, 0, 4, 0);
+        addButton.Margin = new Padding(0, 0, 4, 0);
         addButton.AccessibleName = "Add up to nine images";
         addButton.Click += (_, _) => ChooseImages();
         _settingTooltips.SetToolTip(addButton, "Add images to the composition.");
-        heading.Controls.Add(addButton, 1, 0);
+        actions.Controls.Add(addButton, 0, 0);
         _clearImagesButton.Dock = DockStyle.Fill;
-        _clearImagesButton.Margin = new Padding(4, 0, 4, 0);
+        _clearImagesButton.Margin = new Padding(4, 0, 0, 0);
         _clearImagesButton.AccessibleName = "Clear all images";
         _clearImagesButton.Click += (_, _) => ClearImages();
         _settingTooltips.SetToolTip(_clearImagesButton, "Remove all images from the list.");
-        heading.Controls.Add(_clearImagesButton, 2, 0);
+        actions.Controls.Add(_clearImagesButton, 1, 0);
         content.Controls.Add(heading, 0, 0);
+        content.Controls.Add(actions, 0, 1);
+        content.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = SurfaceColor, Margin = Padding.Empty }, 0, 2);
 
         _imageList.Dock = DockStyle.Fill;
         _imageList.BackColor = FieldColor;
         _imageList.ForeColor = TextColor;
-        _imageList.BorderStyle = BorderStyle.FixedSingle;
+        _imageList.BorderStyle = BorderStyle.None;
         _imageList.Font = new Font(Font.FontFamily, 9.5F);
         _imageList.AccessibleName = "Images in composition order";
         _imageList.DrawItem += DrawImageListItem;
         _imageList.SelectedIndexChanged += (_, _) => UpdateMoveButtons();
         _imageListHost.Controls.Add(_imageList);
         _imageListHost.Controls.Add(_imageHint);
-        content.Controls.Add(_imageListHost, 0, 1);
+        content.Controls.Add(_imageListHost, 0, 3);
+        ApplyRoundedCorners(_imageListHost, 7);
+        ApplyRoundedCorners(_imageList, 7);
+        ApplyRoundedCorners(_imageHint, 7);
 
         var moveButtons = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, BackColor = SurfaceColor, Margin = Padding.Empty };
         moveButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
@@ -438,91 +514,165 @@ internal sealed class MainForm : Form
         moveButtons.Controls.Add(_moveUp, 0, 0);
         moveButtons.Controls.Add(_moveDown, 1, 0);
         moveButtons.Controls.Add(_removeSelectedButton, 2, 0);
-        content.Controls.Add(moveButtons, 0, 2);
+        content.Controls.Add(moveButtons, 0, 4);
 
-        var hint = new Label { Text = "Alt + ↑ / ↓ to reorder", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, AutoSize = true, Font = Font, ForeColor = MutedColor };
-        content.RowStyles[3] = new RowStyle(SizeType.Absolute, hint.PreferredHeight + 2);
-        hint.AutoSize = false;
+        var hint = new Label { Text = "Alt + ↑ / ↓ to reorder", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, AutoSize = false, Font = BackdropTypography.Create(8F), ForeColor = MutedColor };
         hint.AccessibleName = "Image reorder instructions";
-        content.Controls.Add(hint, 0, 3);
-        body.Controls.Add(content);
+        content.Controls.Add(hint, 0, 5);
         _imageList.DragEnter += AcceptImageDrop;
         _imageList.DragDrop += AddDroppedImages;
-        SetDropTarget(card);
-        SetDropTarget(body);
+        SetDropTarget(content);
         SetDropTarget(_imageListHost);
         SetDropTarget(_imageHint);
         SetDropTarget(hint);
-        return card;
+        return content;
     }
 
     private Control BuildFooter()
     {
-        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Padding = new Padding(0, 4, 0, 0) };
-        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 68));
-        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32));
-        footer.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var left = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = WindowColor, Margin = Padding.Empty };
-        left.RowStyles.Add(new RowStyle(SizeType.Percent, 52));
-        left.RowStyles.Add(new RowStyle(SizeType.Percent, 48));
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Padding = Padding.Empty, Margin = Padding.Empty };
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300));
+        footer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var left = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 2, BackColor = WindowColor, Margin = Padding.Empty };
+        left.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var statusHeight = Math.Max(22, TextRenderer.MeasureText("Mg", _status.Font, Size.Empty,
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Height + 4);
+        var actionButtonHeight = Math.Max(32, TextRenderer.MeasureText("Mg", _openImageButton.Font, Size.Empty,
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Height + 12);
+        var actionHeight = actionButtonHeight + 4;
+        left.RowStyles.Add(new RowStyle(SizeType.Absolute, statusHeight));
+        left.RowStyles.Add(new RowStyle(SizeType.Absolute, actionHeight));
         _status.Dock = DockStyle.Fill;
         _status.AutoEllipsis = true;
+        _status.Margin = Padding.Empty;
+        _status.AutoSize = false;
         left.Controls.Add(_status, 0, 0);
         _outputActions.Controls.Add(_openImageButton);
         _outputActions.Controls.Add(_openFolderButton);
-        _openImageButton.AutoSize = true;
-        _openFolderButton.AutoSize = true;
-        _openImageButton.Height = 29;
-        _openFolderButton.Height = 29;
+        _outputActions.FlowDirection = FlowDirection.LeftToRight;
+        _outputActions.Height = actionHeight;
+        _openImageButton.AutoSize = false;
+        _openFolderButton.AutoSize = false;
+        _openImageButton.Height = actionButtonHeight;
+        _openFolderButton.Height = actionButtonHeight;
+        UpdateOutputActionButtonWidths();
+        _openImageButton.FontChanged += (_, _) => UpdateOutputActionButtonWidths();
+        _openFolderButton.FontChanged += (_, _) => UpdateOutputActionButtonWidths();
+        DpiChanged += (_, _) => UpdateOutputActionButtonWidths();
+        _openImageButton.Margin = new Padding(0, 0, 8, 0);
+        _openFolderButton.Margin = Padding.Empty;
         _openImageButton.Click += (_, _) => OpenGeneratedImage();
         _openFolderButton.Click += (_, _) => OpenGeneratedFolder();
         left.Controls.Add(_outputActions, 0, 1);
         footer.Controls.Add(left, 0, 0);
+        _exportActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 22));
+        _exportActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _exportActions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
+        _exportActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        _exportSpinner.Anchor = AnchorStyles.None;
         _generateButton.Dock = DockStyle.Fill;
         _generateButton.Font = new Font(Font.FontFamily, 11, FontStyle.Bold);
         _generateButton.TextAlign = ContentAlignment.MiddleCenter;
-        _generateButton.Margin = new Padding(12, 0, 0, 0);
+        _generateButton.Margin = new Padding(0, 7, 0, 7);
+        _generateButton.Height = 44;
         _generateButton.AccessibleName = "Create PNG composition";
         _generateButton.Click += async (_, _) => await GenerateImageAsync();
-        footer.Controls.Add(_generateButton, 1, 0);
+        _cancelExportButton.Dock = DockStyle.Fill;
+        _cancelExportButton.Margin = new Padding(0, 7, 0, 7);
+        _cancelExportButton.Click += (_, _) => CancelExport();
+        _exportActions.Controls.Add(_exportSpinner, 0, 0);
+        _exportActions.Controls.Add(_generateButton, 0, 0);
+        _exportActions.Controls.Add(_cancelExportButton, 2, 0);
+        _exportActions.SetColumnSpan(_generateButton, 3);
+        footer.Controls.Add(_exportActions, 1, 0);
         return footer;
+    }
+
+    private void UpdateOutputActionButtonWidths()
+    {
+        const TextFormatFlags flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+                                      TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis;
+        using var context = _openImageButton.CreateGraphics();
+        _openImageButton.Width = TextRenderer.MeasureText(context, _openImageButton.Text, _openImageButton.Font,
+            new Size(1000, _openImageButton.Height), flags).Width + 18;
+        _openFolderButton.Width = TextRenderer.MeasureText(context, _openFolderButton.Text, _openFolderButton.Font,
+            new Size(1000, _openFolderButton.Height), flags).Width + 18;
     }
 
     private static Panel CreateCard() => new() { Dock = DockStyle.Fill, BackColor = SurfaceColor, Padding = Padding.Empty };
 
     private static Panel CreateCardInterior() => new() { Dock = DockStyle.Fill, BackColor = SurfaceColor, Padding = Padding.Empty };
 
-    private static Label SectionLabel(string text) => new()
+    private static void ApplyRoundedCorners(Control control, float radiusDip)
+    {
+        void UpdateRegion(object? sender, EventArgs e)
+        {
+            var width = control.ClientSize.Width;
+            var height = control.ClientSize.Height;
+            if (control.IsDisposed || width <= 0 || height <= 0)
+                return;
+
+            var radius = radiusDip * control.DeviceDpi / 96f;
+            using var path = BackdropControlPaint.RoundedRectangle(new RectangleF(0, 0, width, height), radius);
+            var previousRegion = control.Region;
+            control.Region = new Region(path);
+            previousRegion?.Dispose();
+        }
+
+        control.SizeChanged += UpdateRegion;
+        control.DpiChangedAfterParent += UpdateRegion;
+        control.HandleCreated += UpdateRegion;
+        UpdateRegion(control, EventArgs.Empty);
+    }
+
+    private static Label SectionLabel(string text, float fontSize = 8.5F) => new()
     {
         Text = text,
         Dock = DockStyle.Fill,
         TextAlign = ContentAlignment.MiddleLeft,
         ForeColor = TextColor,
-        Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-        AutoSize = true
+        Font = BackdropTypography.Create(fontSize, FontStyle.Bold),
+        AutoSize = false,
+        Margin = Padding.Empty,
+        Padding = Padding.Empty
     };
 
-    private static Control MakeSettingField(string labelText, Control input)
+    private static Control MakeSettingField(string labelText, Control input, bool inlineLabel = true)
     {
-        var field = new TableLayoutPanel { Dock = DockStyle.Top, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 2, BackColor = SurfaceColor, Margin = new Padding(3, 0, 3, 0) };
-        field.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        field.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        field.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-        field.Controls.Add(new Label { Text = labelText, Dock = DockStyle.Fill, ForeColor = MutedColor, AutoSize = true, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 0, 0, 2), AccessibleName = labelText }, 0, 0);
+        var field = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = inlineLabel ? 2 : 1, RowCount = inlineLabel ? 1 : 3, BackColor = SurfaceColor, Margin = inlineLabel ? new Padding(0, 0, 0, 6) : Padding.Empty };
+        if (inlineLabel)
+        {
+            field.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
+            field.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            field.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        }
+        else
+        {
+            field.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            field.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+            field.RowStyles.Add(new RowStyle(SizeType.Absolute, 6));
+            field.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        }
+        var label = new Label { Text = labelText, Dock = DockStyle.Fill, ForeColor = MutedColor, AutoSize = false, Font = BackdropTypography.Create(inlineLabel ? 9.5F : 8.5F), TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty, AccessibleName = labelText };
+        field.Controls.Add(label, 0, 0);
+        if (!inlineLabel)
+            field.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = SurfaceColor, Margin = Padding.Empty }, 0, 1);
         input.Dock = DockStyle.Fill;
         input.Margin = Padding.Empty;
         input.MinimumSize = new Size(0, 38);
+        input.Size = new Size(0, 38);
         input.Height = 38;
         input.ForeColor = TextColor;
-        input.BackColor = FieldColor;
+        input.BackColor = input is SegmentedChoiceControl ? SurfaceColor : FieldColor;
         if (string.IsNullOrWhiteSpace(input.AccessibleName))
             input.AccessibleName = labelText;
         if (input is BackdropNumberSelector number)
         {
-            number.Font = new Font("Segoe UI", 10F);
+            number.Font = BackdropTypography.Create(10F);
             number.RefreshAccessibility();
         }
-        field.Controls.Add(input, 0, 1);
+        field.Controls.Add(input, inlineLabel ? 1 : 0, inlineLabel ? 0 : 2);
         return field;
     }
 
@@ -553,7 +703,19 @@ internal sealed class MainForm : Form
     {
         _padding.ValueChanged += (_, _) => QueuePreview();
         _shadow.ValueChanged += (_, _) => QueuePreview();
-        _outputWidth.ValueChanged += (_, _) => QueuePreview();
+        _outputWidth.SelectedIndexChanged += (_, _) =>
+        {
+            if (_outputWidth.SelectedIndex >= 0 && _outputWidth.SelectedIndex < OutputSizePresets.Length)
+            {
+                _outputWidthPixels = OutputSizePresets[_outputWidth.SelectedIndex].Pixels;
+                if (_hasCustomOutputWidth)
+                {
+                    _outputWidth.Items.RemoveAt(OutputSizePresets.Length);
+                    _hasCustomOutputWidth = false;
+                }
+            }
+            QueuePreview();
+        };
         _ratio.SelectedIndexChanged += (_, _) => QueuePreview();
         _layout.SelectedIndexChanged += (_, _) => QueuePreview();
     }
@@ -663,7 +825,7 @@ internal sealed class MainForm : Form
     {
         PaddingPercent = (int)_padding.Value,
         ShadowStrength = (double)_shadow.Value / 100,
-        OutputWidth = (int)_outputWidth.Value,
+        OutputWidth = _outputWidthPixels,
         CanvasRatio = _ratio.SelectedIndex switch
         {
             0 => CanvasRatio.Auto,
@@ -884,22 +1046,44 @@ internal sealed class MainForm : Form
 
     private void UpdateGenerateButton()
     {
-        _generateButton.Text = _isGenerating ? "Cancel" : "Create PNG";
-        _generateButton.AccessibleName = _isGenerating ? "Cancel PNG creation" : "Create PNG composition";
-        _generateButton.Enabled = _isGenerating
-            ? _exportCancellation?.IsCancellationRequested != true
-            : _imagePaths.Length > 0;
+        _generateButton.Text = _isGenerating ? "Creating PNG…" : "Create PNG";
+        _generateButton.AccessibleName = "Create PNG composition";
+        _generateButton.AccessibleDescription = _isGenerating
+            ? "PNG export in progress. Use Cancel to stop the export."
+            : "Create a full-resolution PNG composition.";
+        _generateButton.Enabled = !_isGenerating && _imagePaths.Length > 0;
+        _cancelExportButton.Visible = _isGenerating;
+        _cancelExportButton.Enabled = _isGenerating && _exportCancellation?.IsCancellationRequested != true;
+        _exportSpinner.Visible = _isGenerating;
+        if (_isGenerating)
+        {
+            _exportSpinner.StartSpinning();
+            _exportActions.SetColumn(_generateButton, 1);
+            _exportActions.SetColumnSpan(_generateButton, 1);
+        }
+        else
+        {
+            _exportSpinner.StopSpinning();
+            _exportActions.SetColumn(_generateButton, 0);
+            _exportActions.SetColumnSpan(_generateButton, 3);
+        }
+        _exportActions.PerformLayout();
+    }
+
+    private void CancelExport()
+    {
+        if (!_isGenerating || _exportCancellation is null || _exportCancellation.IsCancellationRequested)
+            return;
+
+        _exportCancellation.Cancel();
+        UpdateGenerateButton();
+        _status.Text = "Cancelling PNG creation…";
     }
 
     private async Task GenerateImageAsync()
     {
         if (_isGenerating)
-        {
-            _exportCancellation?.Cancel();
-            _generateButton.Enabled = false;
-            _status.Text = "Cancelling PNG creation…";
             return;
-        }
         if (_imagePaths.Length == 0)
             return;
 
@@ -909,6 +1093,7 @@ internal sealed class MainForm : Form
         var cancellationToken = _exportCancellation.Token;
         _isGenerating = true;
         UpdateGenerateButton();
+        _cancelExportButton.Focus();
         _status.Text = "Creating PNG…";
         try
         {
@@ -953,7 +1138,7 @@ internal sealed class MainForm : Form
     {
         if (!_shellMenuScriptsAvailable)
         {
-            ShowError("The Explorer menu scripts are not beside this application. Use the packaged Backdrop build to enable the Windows 11 menu.");
+            ShowError("The Explorer menu scripts are not beside this application. Use the packaged Softstage build to enable the Windows 11 menu.");
             return;
         }
 
@@ -1138,7 +1323,7 @@ internal sealed class MainForm : Form
         ShowError(detail);
     }
 
-    private void ShowError(string message) => MessageBox.Show(this, message, "Backdrop", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    private void ShowError(string message) => MessageBox.Show(this, message, "Softstage", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);

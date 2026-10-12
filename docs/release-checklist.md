@@ -1,4 +1,6 @@
-# Backdrop 0.1.0 release checklist
+# Softstage 0.1.0 release checklist
+
+> **Historical evidence:** The checked items below were completed for an earlier 0.1.0 candidate. They are not evidence for the R30 legal-preparation candidate or any new installer.
 
 ## Target
 
@@ -20,7 +22,7 @@ The registry safety fixture checks unregistration ownership. It does not prove r
 ## Installer checks on the development machine
 
 - [x] Install for the current user without administrator access.
-- [x] Remove only the known Backdrop developer sparse package.
+- [x] Remove only the known developer sparse package.
 - [x] Activate the registered shell command with two and nine pictures; create one output per selection.
 - [x] Upgrade an existing consumer installation.
 - [x] Uninstall and confirm that owned shell entries and app files are removed.
@@ -50,3 +52,22 @@ The settings file was absent before the installer checks and remained absent. Pr
 - [ ] Add Store screenshots and accurate product text.
 - [ ] Run the Store certification checks.
 - [ ] Submit the package after the installer release gates pass.
+
+## Current launch preparation (12 October 2026)
+
+This section tracks the current candidate. Do not treat the historical checkboxes above as current validation.
+
+- [x] Record the project owner's confirmed support and privacy email in the draft notices.
+- [x] Record Vercel as the planned host and add its published privacy and runtime-log facts to the draft notices.
+- [ ] Verify the project's Vercel plan and deployed cookie, delivery/security-log, and retention settings before removing `noindex`.
+- [ ] Check the personal mailbox provider's current privacy and retention practices.
+- [ ] Review and approve the Privacy and Licences pages before removing `noindex`. Cookie details are included in Privacy; the R30 standalone terms and cookie drafts are archived under `docs/legal/archive/`.
+- [ ] Confirm the MIT scope in `LICENSE` still matches the published native app source.
+- [x] Build the current site and native application candidates.
+- [x] Check the Privacy and Licences routes, noindex metadata, route status, and static output for this update.
+- [ ] Check the mobile footer layout. The T3 390 × 844 resize timed out.
+- [x] Compile an unsigned Inno Setup candidate and record its SHA-256. The installer was not run.
+- [x] Confirm the installer payload contains only the current Privacy and Licences documents plus the scoped MIT and font licences.
+- [ ] Recheck third-party and .NET runtime notices against the exact release dependency versions.
+- [ ] Decide signing and verify the final installer on a clean Windows 11 x64 machine.
+- [ ] Set the production Store identity, complete package work, and pass current Microsoft certification.

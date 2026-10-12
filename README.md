@@ -1,8 +1,20 @@
-# Backdrop
+# Softstage
 
-Backdrop combines up to nine pictures into one PNG. The window shows a live preview. Add files with **Add images** or drop them into the window. Select an image and use the previous or next button to set its order. You can also press **Alt+Up** and **Alt+Down**. Pictures keep their original shape and are never cropped.
+Softstage combines up to nine pictures into one PNG. The window shows a live preview. Add files with **Add images** or drop them into the window. Select an image and use the previous or next button to set its order. You can also press **Alt+Up** and **Alt+Down**. Pictures keep their original shape and are never cropped.
 
-Image processing runs on your device. Backdrop does not upload pictures or require an account.
+Image processing runs on your device. Softstage does not upload pictures, require an account, or include telemetry or analytics.
+
+## License and distribution
+
+The native Windows app source files listed in the repository [LICENSE](LICENSE) are licensed under MIT. The website, React Bits components, libraries, fonts, sample artwork, logos, and other assets are outside that grant unless their own notices say otherwise. See [third-party notices](docs/legal/third-party-notices.md).
+
+Softstage is planned as a free app. GitHub releases and the Microsoft Store are distribution targets. No public binary or Store submission is ready yet. See the [release checklist](docs/release-checklist.md) for remaining release steps.
+
+## Website, privacy, and support
+
+The website is maintained in the separate sibling project `../softstage-site` and the private `softstage-site` repository. Its Vercel project root is that repository root. The planned production domain is https://softstage.tolani.xyz; it has not been deployed.
+
+The Privacy page is finalized at https://softstage.tolani.xyz/privacy. Production response headers, cookie behavior, and hosting log scope still need verification before publication. For support or privacy requests, email [fagbenjatolani@gmail.com](mailto:fagbenjatolani@gmail.com).
 
 ## Composition
 
@@ -14,13 +26,15 @@ Image processing runs on your device. Backdrop does not upload pictures or requi
 - **Shadow:** A soft Gaussian shadow under each picture.
 - **Background:** Choose **Automatic gradient**, **Solid color**, **Two-color gradient**, or **Pattern**. Automatic gradient samples every selected picture on an equal 24 × 24 grid. It keeps gray colors for monochrome pictures. Set **Lighten colors (%)** from 0 for the sampled colors to 100 for white. The default is 20. This setting only affects Automatic gradient. Pattern uses one base color with soft grain or spaced dots.
 
-The live preview uses a 1000-pixel long edge. Backdrop checks the full source size and orientation before it reduces a picture. It reuses the reduced picture while the source stays unchanged. The final PNG uses the selected long edge. A small spinner shows while the preview updates after a short pause. **Save preferences** stores settings in `%LOCALAPPDATA%\Backdrop\settings.json`; changes are not saved automatically.
+The live preview uses a 1000-pixel long edge. Softstage checks the full source size and orientation before it reduces a picture. It reuses the reduced picture while the source stays unchanged. The final PNG uses the selected long edge. A small spinner shows while the preview updates after a short pause. **Save preferences** stores settings in `%LOCALAPPDATA%\Backdrop\settings.json`; changes are not saved automatically.
 
 Choose **Background** above the preview to edit the background. Use a quick color swatch, enter an opaque `#RRGGBB` value, or open the custom advanced color picker. Invalid visible color text keeps the editor open until you correct it. Background changes update the preview. **Apply** keeps them in the current session; choose **Save preferences** in the main window to keep them for later.
 
 The advanced picker has hue and saturation/brightness controls. It shows the current and new colors. Canvas size, padding, shadow, and lightening use horizontal number selectors. Click a left or right chevron, or type a whole number in the center.
 
-Backdrop preserves the source files and never replaces an output. A single picture is named `<image>-backdrop.png`. A group is named `backdrop-composition.png`. If that name exists, Backdrop adds a number.
+Softstage embeds regular and bold Google Sans Flex text faces for offline use. The faces are derived from the official v4.007 variable font at optical size 12 and width 100. The app also embeds the SIL Open Font License. See `assets/fonts/OFL.txt` and `docs/design.md` for the source and axis settings.
+
+Softstage preserves the source files and never replaces an output. A single picture is named `<image>-softstage.png`. A group is named `softstage-composition.png`. If that name exists, Softstage adds a number.
 
 ## Run
 
@@ -49,11 +63,11 @@ The command prints the output path when it has a console. When Explorer starts i
 
 ## Windows installer candidate
 
-The first release target is a downloadable installer for Windows 11 on x64 hardware. The installer includes the .NET runtime. Users do not need the SDK, administrator access, Developer Mode, or a test certificate. It installs for the current user in `%LOCALAPPDATA%\Programs\Backdrop`.
+The Windows release target is a downloadable Softstage installer for Windows 11 on x64 hardware. The installer includes the .NET runtime. Users do not need the SDK, administrator access, Developer Mode, or a test certificate. It installs for the current user in `%LOCALAPPDATA%\Programs\Backdrop`.
 
-The installer registers **Create composition with Backdrop** for Explorer's **Show more options** menu. Actual menu visibility still needs the manual Explorer check. The command sends the selected pictures to one composition. Use **Remove Explorer menu** in the app to disable it, or **Enable Explorer menu** to enable it again. The consumer installer uses a classic shell command. The older sparse package scripts are for development only.
+The installer registers **Create composition with Softstage** for Explorer's **Show more options** menu. Actual menu visibility still needs the manual Explorer check. The command sends the selected pictures to one composition. Use **Remove Explorer menu** in the app to disable it, or **Enable Explorer menu** to enable it again. The consumer installer uses a classic shell command. The older sparse package scripts are for development only.
 
-The installer candidate is unsigned. Windows can show a SmartScreen warning. A public binary release is pending the clean-machine and real Explorer checks in [the release checklist](docs/release-checklist.md). Microsoft Store packaging is the next release target.
+The installer candidate is unsigned. Windows can show a SmartScreen warning. GitHub release publication is pending the clean-machine and real Explorer checks in [the release checklist](docs/release-checklist.md). Microsoft Store packaging and certification remain separate steps.
 
 ### Build the installer
 

@@ -74,7 +74,7 @@ std::vector<fs::path> CompositionFiles(const fs::path& folder)
         if (!entry.is_regular_file())
             continue;
         const std::wstring name = entry.path().filename().wstring();
-        if (name.rfind(L"backdrop-composition", 0) == 0 && entry.path().extension() == L".png")
+        if (name.rfind(L"softstage-composition", 0) == 0 && entry.path().extension() == L".png")
             files.push_back(entry.path());
     }
     return files;
@@ -134,7 +134,7 @@ int wmain(int argc, wchar_t** argv)
         else
         {
             library = LoadLibraryW(GetDllPath().c_str());
-            Check(library != nullptr, "Could not load Backdrop.Shell.dll.");
+            Check(library != nullptr, "Could not load the Softstage Explorer integration (Backdrop.Shell.dll).");
             auto getClassObject = reinterpret_cast<GetClassObjectFunction>(GetProcAddress(library, "DllGetClassObject"));
             Check(getClassObject != nullptr, "DllGetClassObject export is missing.");
             result = getClassObject(CLSID_BackdropCommand, IID_IClassFactory, reinterpret_cast<void**>(factory.GetAddressOf()));
@@ -165,7 +165,7 @@ int wmain(int argc, wchar_t** argv)
         Check(SUCCEEDED(result) && state == ECS_HIDDEN, "Slow GetState did not hide selections above nine images.");
 
         result = command->Invoke(items.Get(), nullptr);
-        Check(SUCCEEDED(result), "IExplorerCommand::Invoke could not launch Backdrop.exe.");
+        Check(SUCCEEDED(result), "IExplorerCommand::Invoke could not launch the Softstage app (Backdrop.exe).");
 
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(45);
         std::vector<fs::path> outputs;
@@ -177,10 +177,10 @@ int wmain(int argc, wchar_t** argv)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         Check(outputs.size() == 1 && fs::file_size(outputs.front()) > 0,
-            "Invoke did not produce exactly one composition output.");
+            "Softstage did not produce exactly one composition output.");
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         outputs = CompositionFiles(runFolder);
-        Check(outputs.size() == 1, "Invoke launched multiple composition workers.");
+        Check(outputs.size() == 1, "Softstage launched multiple composition workers.");
 
         std::wcout << L"Native COM harness passed. One worker created " << outputs.front().wstring() << L"\n";
         items.Reset();

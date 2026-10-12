@@ -12,16 +12,16 @@
 #endif
 
 #define AppId "Backdrop.ConsumerInstaller"
-#define AppName "Backdrop"
+#define AppName "Softstage"
 
 [Setup]
 AppId={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher=Backdrop
+AppPublisher=Softstage
 DefaultDirName={localappdata}\Programs\Backdrop
-DefaultGroupName=Backdrop
+DefaultGroupName=Softstage
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
@@ -30,7 +30,7 @@ ArchitecturesInstallIn64BitMode=x64os
 MinVersion=10.0.22000
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputName}
-UninstallDisplayName=Backdrop
+UninstallDisplayName=Softstage
 UninstallDisplayIcon={app}\Backdrop.exe
 CloseApplications=yes
 CloseApplicationsFilter=Backdrop.exe,Backdrop.Shell.dll
@@ -49,13 +49,16 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "{#PayloadRoot}\Backdrop.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\Backdrop.Shell.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\scripts\classic-shell.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#PayloadRoot}\legal\*.md"; DestDir: "{app}\legal"; Flags: ignoreversion
+Source: "{#PayloadRoot}\licenses\GoogleSansFlex-OFL.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
+Source: "{#PayloadRoot}\licenses\Softstage-MIT-LICENSE.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Backdrop"; Filename: "{app}\Backdrop.exe"
-Name: "{autoprograms}\Uninstall Backdrop"; Filename: "{uninstallexe}"
+Name: "{autoprograms}\Softstage"; Filename: "{app}\Backdrop.exe"
+Name: "{autoprograms}\Uninstall Softstage"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\Backdrop.exe"; Description: "Launch Backdrop"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Backdrop.exe"; Description: "Launch Softstage"; Flags: postinstall nowait skipifsilent
 
 [Code]
 const
@@ -112,20 +115,20 @@ begin
   ExpectedPath := ExpandConstant('{localappdata}\Programs\Backdrop');
   if CompareText(RemoveBackslashUnlessRoot(PreviousInstallPath), RemoveBackslashUnlessRoot(ExpectedPath)) <> 0 then
   begin
-    Result := 'A previous Backdrop install uses a different location. Remove that install before continuing.';
+    Result := 'A previous Softstage install uses a different location. Remove that install before continuing.';
     exit;
   end;
 
   ScriptPath := AddBackslash(PreviousInstallPath) + 'scripts\classic-shell.ps1';
   if not FileExists(ScriptPath) then
   begin
-    Result := 'The previous Backdrop Explorer integration script is missing. Repair or remove that installation before upgrading.';
+    Result := 'The previous Softstage Explorer integration script is missing. Repair or remove that installation before upgrading.';
     exit;
   end;
 
   if not RunClassicShellAction(PreviousInstallPath, 'Unregister', ErrorText) then
   begin
-    Result := 'Backdrop could not remove its previous Explorer registration.' + #13#10 + ErrorText;
+    Result := 'Softstage could not remove its previous Explorer registration.' + #13#10 + ErrorText;
     exit;
   end;
   UpgradeShellWasUnregistered := True;
@@ -139,7 +142,7 @@ begin
   UninstallInstallPath := ExpandConstant('{app}');
   if not FileExists(AddBackslash(UninstallInstallPath) + 'scripts\classic-shell.ps1') then
   begin
-    MsgBox('Backdrop could not find its Explorer integration script. The application files were kept.',
+    MsgBox('Softstage could not find its Explorer integration script. The application files were kept.',
       mbError, MB_OK);
     Result := False;
     exit;
@@ -147,7 +150,7 @@ begin
 
   if not RunClassicShellAction(UninstallInstallPath, 'Unregister', ErrorText) then
   begin
-    MsgBox('Backdrop could not remove its Explorer registration. The application files were kept.' + #13#10 + ErrorText,
+    MsgBox('Softstage could not remove its Explorer registration. The application files were kept.' + #13#10 + ErrorText,
       mbError, MB_OK);
     Result := False;
   end;
@@ -165,7 +168,7 @@ begin
      FileExists(AddBackslash(UninstallInstallPath) + 'scripts\classic-shell.ps1') then
   begin
     if not RunClassicShellAction(UninstallInstallPath, 'Register', ErrorText) then
-      MsgBox('Backdrop could not restore its Explorer menu. If Backdrop is still installed, reinstall it to repair the menu.' + #13#10 + ErrorText,
+      MsgBox('Softstage could not restore its Explorer menu. If Softstage is still installed, reinstall it to repair the menu.' + #13#10 + ErrorText,
         mbError, MB_OK);
   end;
 end;
@@ -176,9 +179,17 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
+    if UpgradeShellWasUnregistered and
+       FileExists(ExpandConstant('{autoprograms}\Softstage.lnk')) and
+       FileExists(ExpandConstant('{autoprograms}\Uninstall Softstage.lnk')) then
+    begin
+      DeleteFile(ExpandConstant('{autoprograms}\Backdrop.lnk'));
+      DeleteFile(ExpandConstant('{autoprograms}\Uninstall Backdrop.lnk'));
+    end;
+
     ShellRegistrationSucceeded := RunClassicShellAction(ExpandConstant('{app}'), 'Register', ErrorText);
     if not ShellRegistrationSucceeded then
-      MsgBox('Backdrop was installed, but the Explorer menu could not be enabled. Open Backdrop and choose Enable Explorer menu to try again.' + #13#10 + ErrorText,
+      MsgBox('Softstage was installed, but the Explorer menu could not be enabled. Open Softstage and choose Enable Explorer menu to try again.' + #13#10 + ErrorText,
         mbError, MB_OK);
   end;
 end;
@@ -192,7 +203,7 @@ begin
      FileExists(AddBackslash(PreviousInstallPath) + 'scripts\classic-shell.ps1') then
   begin
     if not RunClassicShellAction(PreviousInstallPath, 'Register', ErrorText) then
-      MsgBox('Setup did not restore the previous Explorer menu. Open Backdrop and choose Enable Explorer menu to try again.' + #13#10 + ErrorText,
+      MsgBox('Setup did not restore the previous Explorer menu. Open Softstage and choose Enable Explorer menu to try again.' + #13#10 + ErrorText,
         mbError, MB_OK);
   end;
 end;
