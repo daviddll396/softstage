@@ -7,7 +7,9 @@ namespace Backdrop;
 
 internal sealed class MainForm : Form
 {
+#if !SOFTSTAGE_STORE
     private const string ShellPackageName = "Backdrop.ShellPrototype";
+#endif
     private static readonly Color WindowColor = BackdropPalette.Window;
     private static readonly Color SurfaceColor = BackdropPalette.Surface;
     private static readonly Color FieldColor = BackdropPalette.Field;
@@ -84,7 +86,9 @@ internal sealed class MainForm : Form
         Size = new Size(0, 44),
         MinimumSize = new Size(0, 44)
     };
+#if !SOFTSTAGE_STORE
     private readonly Button _shortcutButton = MakeButton("Enable right-click shortcut");
+#endif
     private readonly Button _openImageButton = MakeButton("Open image");
     private readonly Button _openFolderButton = MakeButton("Show folder");
     private readonly FlowLayoutPanel _outputActions = new()
@@ -107,9 +111,11 @@ internal sealed class MainForm : Form
     private int _outputWidthPixels = 1920;
     private bool _hasCustomOutputWidth;
     private bool _isGenerating;
+#if !SOFTSTAGE_STORE
     private bool _isShellMenuChanging;
     private bool _shellMenuScriptsAvailable;
     private bool _classicShellHelperAvailable;
+#endif
     private BackgroundMode _backgroundMode;
     private string _backgroundColor1Hex = "#303137";
     private string _backgroundColor2Hex = "#4B4C53";
@@ -163,7 +169,9 @@ internal sealed class MainForm : Form
         UpdateImageList();
         if (_imagePaths.Length > 0)
             _status.Text = $"{_imagePaths.Length} images ready.";
+#if !SOFTSTAGE_STORE
         _ = RefreshExplorerMenuStatusAsync();
+#endif
         WirePreviewEvents();
         _previewTimer.Tick += PreviewTimer_Tick;
 
@@ -223,14 +231,20 @@ internal sealed class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_isGenerating || _isShellMenuChanging)
+        if (_isGenerating)
         {
             e.Cancel = true;
-            _status.Text = _isGenerating
-                ? "PNG creation is still running. Please wait for it to finish."
-                : "Windows menu setup is still running. Please wait for it to finish.";
+            _status.Text = "PNG creation is still running. Please wait for it to finish.";
             return;
         }
+#if !SOFTSTAGE_STORE
+        if (_isShellMenuChanging)
+        {
+            e.Cancel = true;
+            _status.Text = "Windows menu setup is still running. Please wait for it to finish.";
+            return;
+        }
+#endif
         base.OnFormClosing(e);
     }
 
@@ -277,7 +291,11 @@ internal sealed class MainForm : Form
     {
         var header = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 2, RowCount = 1, BackColor = WindowColor, Margin = Padding.Empty };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+#if SOFTSTAGE_STORE
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+#else
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 452));
+#endif
         header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         var brand = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 2, BackColor = WindowColor, Padding = Padding.Empty, Margin = new Padding(0, 0, 0, 8) };
         brand.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -303,13 +321,15 @@ internal sealed class MainForm : Form
         saveButton.Height = 34;
         saveButton.Margin = Padding.Empty;
         saveButton.Click += (_, _) => SavePreferences();
+        actions.Controls.Add(saveButton);
+#if !SOFTSTAGE_STORE
         _shortcutButton.AutoSize = false;
         _shortcutButton.Width = 204;
         _shortcutButton.Height = 34;
         _shortcutButton.Margin = new Padding(0, 0, 8, 0);
         _shortcutButton.Click += (_, _) => ToggleExplorerMenu();
-        actions.Controls.Add(saveButton);
         actions.Controls.Add(_shortcutButton);
+#endif
         header.Controls.Add(actions, 1, 0);
         return header;
     }
@@ -1134,6 +1154,7 @@ internal sealed class MainForm : Form
         }
     }
 
+#if !SOFTSTAGE_STORE
     private async void ToggleExplorerMenu()
     {
         if (!_shellMenuScriptsAvailable)
@@ -1253,6 +1274,7 @@ internal sealed class MainForm : Form
         await process.WaitForExitAsync();
         return (process.ExitCode, await outputTask, await errorTask);
     }
+#endif
 
     private void ReplacePreview(Image image)
     {

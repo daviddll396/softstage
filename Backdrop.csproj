@@ -13,6 +13,9 @@
     <Product>Softstage</Product>
     <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;site/node_modules/**;site/.next/**;site/out/**</DefaultItemExcludes>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(SoftstageStoreBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);SOFTSTAGE_STORE</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="assets\fonts\GoogleSansFlex-Regular.ttf" LogicalName="Backdrop.Fonts.GoogleSansFlex-Regular.ttf" />
     <EmbeddedResource Include="assets\fonts\GoogleSansFlex-Bold.ttf" LogicalName="Backdrop.Fonts.GoogleSansFlex-Bold.ttf" />

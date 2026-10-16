@@ -4,7 +4,7 @@ Copyright (c) 2026 Tolani Fagbenja
 
 Scope: This license applies only to the original native Windows app and its build, shell-integration, and installer source files listed below. It does not apply to the website or React Bits-derived components, third-party software, fonts, sample compositions or source artwork, logos, trademarks, or other assets. Those items keep their own licenses or rights. See docs/legal/third-party-notices.md and the notices shipped with the app.
 
-The license applies to the root-level C# source files, `Backdrop.csproj`, `shell/BackdropShell.cpp`, `shell/BackdropShell.def`, `shell/BackdropShellHarness.cpp`, `shell/AppxManifest.xml`, all PowerShell source files in `scripts/`, and `installer/Backdrop.iss`. It does not apply to files outside that list unless another notice says so.
+The license applies to the root-level C# source files, `Backdrop.csproj`, `shell/BackdropShell.cpp`, `shell/BackdropShell.def`, `shell/BackdropShellHarness.cpp`, `shell/AppxManifest.xml`, all PowerShell source files in `scripts/`, `installer/Backdrop.iss`, and `installer/store/AppxManifest.xml`. It does not apply to files outside that list unless another notice says so.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
