@@ -1,0 +1,146 @@
+{
+  "title": "Softstage Store trailer R2",
+  "composition": {
+    "name": "SoftstageStoreTrailerR2",
+    "frameSize": "1920x1080",
+    "frameRate": 30,
+    "frameCount": 933,
+    "durationSeconds": 31.1,
+    "generatedCompositionsVisibleAtOnce": 1,
+    "workflow": [
+      "Select three source images in Explorer.",
+      "Right-click and open the Softstage command.",
+      "Hover over and click the real Create composition with Softstage command.",
+      "Show one generated PNG tile.",
+      "Zoom into the real PNG tile, then return to the folder view.",
+      "Double-click the PNG and cut to one full-window Photos view."
+    ],
+    "capturePolicy": "The edit uses multiple real recordings. It does not present them as one uncut take. No cursor, menu, output, or Windows control is recreated."
+  },
+  "edit": {
+    "sourceRecord": "assets/store/r2/source-inventory.md",
+    "brief": "assets/store/r2/sequence-brief.md",
+    "storyboard": "assets/store/r2/storyboard.md",
+    "sourceRecordings": [
+      "assets/store/r2/raw/workflow-take1.mp4",
+      "assets/store/r2/raw/command-click-final.mp4",
+      "assets/store/r2/raw/opened-composition-desktop.mp4"
+    ],
+    "usedProxies": [
+      "video/public/media/store-r2/explorer-focused.mp4",
+      "video/public/media/store-r2/explorer-created.mp4",
+      "video/public/media/store-r2/command-closeup.mp4",
+      "video/public/media/store-r2/photos-window.mp4"
+    ],
+    "unusedSources": [
+      "assets/store/r2/raw/opened-composition.mp4",
+      "assets/store/r2/raw/command-hover-click.mp4",
+      "video/public/media/store-r2/explorer-cropped.mp4"
+    ],
+    "timeline": [
+      { "startSeconds": 0.0, "endSeconds": 1.53, "scene": "Softstage opening" },
+      { "startSeconds": 1.53, "endSeconds": 5.53, "scene": "Real selection of three images" },
+      { "startSeconds": 5.53, "endSeconds": 8.7, "scene": "Real right-click and first menu" },
+      { "startSeconds": 8.7, "endSeconds": 13.2, "scene": "Real extended menu" },
+      { "startSeconds": 13.2, "endSeconds": 16.1, "scene": "Real command hover and click, enlarged 2.2x" },
+      { "startSeconds": 16.1, "endSeconds": 21.57, "scene": "One PNG appears; smooth centered zoom on the real thumbnail" },
+      { "startSeconds": 21.57, "endSeconds": 25.1, "scene": "Real double-click, then hard cut before the dark loading pause" },
+      { "startSeconds": 25.1, "endSeconds": 29.1, "scene": "Full Photos view of the same composition" },
+      { "startSeconds": 29.1, "endSeconds": 31.1, "scene": "Softstage closing" }
+    ]
+  },
+  "deliverables": [
+    {
+      "path": "artifacts/store-media-r2/SoftstageStoreTrailerR2-preview.mp4",
+      "purpose": "Shareable 1080p preview with quiet sound effects",
+      "width": 1920,
+      "height": 1080,
+      "frameRate": 30,
+      "frameCount": 933,
+      "durationSeconds": 31.1,
+      "videoCodec": "H.264 High",
+      "videoBitRate": 8000307,
+      "audioCodec": "AAC LC",
+      "audioBitRate": 381371,
+      "audioSampleRate": 48000,
+      "audioChannels": 2,
+      "containerBitRate": 8391198,
+      "bytes": 32620783,
+      "sha256": "329961A83F5BCDEE273CCEE15EDAA3E1C610021AA7C01ACB964A50859D4A334E",
+      "trackedByGit": false
+    },
+    {
+      "path": "artifacts/store-media-r2/SoftstageStoreTrailerR2-master.mp4",
+      "purpose": "50 Mbps Store master with quiet sound effects",
+      "width": 1920,
+      "height": 1080,
+      "frameRate": 30,
+      "frameCount": 933,
+      "durationSeconds": 31.1,
+      "videoCodec": "H.264 High",
+      "videoBitRate": 49679123,
+      "audioCodec": "AAC LC",
+      "audioBitRate": 381371,
+      "audioSampleRate": 48000,
+      "audioChannels": 2,
+      "containerBitRate": 50070015,
+      "bytes": 194647187,
+      "sha256": "E52D2DFD8E5EB8EE3AB7E551089E21C86696E2320039D1C6101A3A0824FC8DC7",
+      "trackedByGit": false
+    },
+    {
+      "path": "artifacts/store-media-r2/SoftstageStoreTrailerR2-silent.mp4",
+      "purpose": "Silent video copy of the Store master",
+      "width": 1920,
+      "height": 1080,
+      "frameRate": 30,
+      "frameCount": 933,
+      "durationSeconds": 31.1,
+      "videoCodec": "H.264 High",
+      "videoBitRate": 49679123,
+      "audioCodec": null,
+      "containerBitRate": 49682497,
+      "bytes": 193140709,
+      "sha256": "A9674C13C0B4B0E74A73FC42E6E9B59F349A8DA95DA2873955F4466ECDEB389B",
+      "trackedByGit": false
+    },
+    {
+      "path": "artifacts/store-media-r2/SoftstageStoreTrailerR2-review.mp4",
+      "purpose": "Low-resolution review copy with sound effects",
+      "width": 960,
+      "height": 540,
+      "frameRate": 30,
+      "frameCount": 933,
+      "durationSeconds": 31.1,
+      "videoCodec": "H.264 High",
+      "videoBitRate": 1610795,
+      "audioCodec": "AAC LC",
+      "audioBitRate": 189373,
+      "audioSampleRate": 48000,
+      "audioChannels": 2,
+      "containerBitRate": 1809567,
+      "bytes": 7034695,
+      "sha256": "DB4EF656E2DB2B4CAD43DF7BA812E824525C384C40299532B9BAE86ED4C4A439",
+      "trackedByGit": false
+    }
+  ],
+  "verification": {
+    "containerProbe": "ffprobe confirmed dimensions, frame rate, frame count, duration, streams, and bit rates for all four files.",
+    "typeCheck": "Ran npx tsc --noEmit from video/ after the final composition edit; it passed.",
+    "visualReview": [
+      "Review frame 444 at 14.8 seconds shows the real command hover and click in the readable close-up.",
+      "Review frame 597 at 19.9 seconds shows the centered zoom peak with the full PNG tile in view.",
+      "Review frame 747 at 24.9 seconds shows three source images and one generated PNG tile.",
+      "Frame 752 is the last Explorer frame and shows one output tile. Frame 753 cuts to the full Photos view. There is no overlap, extra output, or black loading gap."
+    ],
+    "sourceReview": "The edit uses real screen recordings for selection, right-click, menu navigation, command hover and click, PNG output, and double-click. The Photos view is a separate real recording."
+  },
+  "releaseNotes": {
+    "rawSourceDirectory": "assets/store/r2/raw/",
+    "rawSourcePolicy": "Private working sources. Do not stage or distribute.",
+    "excludedBlackCapture": "assets/store/r2/raw/opened-composition.mp4",
+    "excludedUnusedProxy": "video/public/media/store-r2/explorer-cropped.mp4",
+    "renderDirectory": "artifacts/store-media-r2/",
+    "renderPolicy": "Local deliverables and QA files. The directory is ignored by Git."
+  }
+}
