@@ -1,0 +1,173 @@
+{
+  "name": "Softstage Store media",
+  "revision": "r1",
+  "created": "2026-10-16",
+  "project": "Softstage",
+  "timeline": {
+    "source": "video/src/SoftstageStoreTrailer.tsx#storeTimeline",
+    "frameRate": 30,
+    "width": 1920,
+    "height": 1080,
+    "frames": 720,
+    "pictureDurationSeconds": 24
+  },
+  "captures": {
+    "workflowSelect": {
+      "path": "assets/store/r1/source/workflow-select-images-2026-10-14.png",
+      "date": "2026-10-14",
+      "width": 1215,
+      "height": 642,
+      "sha256": "0340F341C47994854B26DE206B5CBCA34A913ED62AAC9EC7AEB27C593750A2A1",
+      "description": "Real Windows Explorer capture. Three source images are selected."
+    },
+    "workflowCommand": {
+      "path": "assets/store/r1/source/workflow-context-menu-pointer-2026-10-14.png",
+      "date": "2026-10-14",
+      "width": 1215,
+      "height": 642,
+      "sha256": "3CFA3C578C87B1CF34B2F23714DCA8DCB7D9B3399AA186774CB21BEE61416040",
+      "description": "Real Windows Explorer capture. The pointer is over the Softstage command."
+    },
+    "workflowCreatedFiles": {
+      "path": "assets/store/r1/source/workflow-created-files-2026-10-14.png",
+      "date": "2026-10-14",
+      "width": 1215,
+      "height": 642,
+      "sha256": "A3CB788A44F01FCE3ADF3AAC637CF49518B1AA09C36AED1715077BF7E4B94AF7",
+      "description": "Real Windows Explorer capture. The source files and generated PNG are unselected."
+    },
+    "workflowComposition": {
+      "path": "assets/store/r1/source/workflow-composition-2026-10-12.png",
+      "date": "2026-10-12",
+      "width": 3840,
+      "height": 2160,
+      "sha256": "1B01BA04C5AF127A42B8519AE4AE9FBAAF66D86D3C994B25BDEC2E19B2C64E5F",
+      "description": "Matching Softstage output. Its image order matches the 14 October result capture."
+    }
+  },
+  "exports": [
+    {
+      "path": "assets/store/r1/exports/store-screenshot-01-select.png",
+      "bytes": 546627,
+      "sha256": "166FDBE9A3BBE606B7B23E260DC31D48465C8575D2F870E43C7AB1078D6ED33C",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "assets/store/r1/exports/store-screenshot-02-command.png",
+      "bytes": 547230,
+      "sha256": "DBFA41AFABE0FD8010140BA998229C80DEABF9E03A345D353687A6D2A4F14377",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "assets/store/r1/exports/store-screenshot-03-created.png",
+      "bytes": 585407,
+      "sha256": "A45DA9E11F89E75C48518042F44B340747790E6AB5730595A09A6D24A39E75F4",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "assets/store/r1/exports/store-screenshot-04-composition.png",
+      "bytes": 1490553,
+      "sha256": "D607D61AF4D6096B3C71FB183709B8BAF0F2F0E37BFDB8149C10D391B39F5761",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "assets/store/r1/exports/store-hero-art.png",
+      "bytes": 2423606,
+      "sha256": "2B6BDD2F75046DE11167FD28EB5AC3754ACA0FC41D6C4D54744FE1624AD4995A",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "assets/store/r1/exports/store-trailer-thumbnail.png",
+      "bytes": 648315,
+      "sha256": "14DD135AB48F82F7A2661FD2E6023EE7C48178BFBFD60FB539F060F0F9C4AF65",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "path": "assets/store/r1/exports/softstage-store-trailer.en.vtt",
+      "bytes": 337,
+      "sha256": "3230B5E56A9DD1CD917617FAC8F763653B152FB0A762C54184BA6356FE5BE7CB"
+    }
+  ],
+  "videos": {
+    "master": {
+      "path": "artifacts/store-media/softstage-store-trailer.mp4",
+      "bytes": 150549310,
+      "sha256": "A9D3DF1CF4DAB89391148B390764631A5656F979229873AFABFD8BB87C6257C0",
+      "containerDurationSeconds": 24.066667,
+      "video": {
+        "codec": "H.264/AVC",
+        "tag": "avc1",
+        "profile": "High",
+        "width": 1920,
+        "height": 1080,
+        "progressive": true,
+        "pixelFormat": "yuv420p",
+        "frameRate": 30,
+        "frames": 720,
+        "durationSeconds": 24,
+        "bitRateBitsPerSecond": 49792409,
+        "gopFrames": 15,
+        "closedGop": true,
+        "bFrames": 2,
+        "cabac": true,
+        "color": "BT.709 limited range"
+      },
+      "audio": {
+        "codec": "AAC-LC",
+        "sampleRateHz": 48000,
+        "channels": 2,
+        "measuredBitRateBitsPerSecond": 380989,
+        "targetBitRateBitsPerSecond": 384000,
+        "source": "Mixkit swoosh-quick effect, low-volume cues"
+      },
+      "mp4FastStart": true,
+      "editList": false
+    },
+    "silent": {
+      "path": "artifacts/store-media/softstage-store-trailer-silent.mp4",
+      "bytes": 149386445,
+      "sha256": "8A569085512CDE6B8D2FDEE0C4A83E67DBD609D9FB477B8ACD0B73B61B8EB353",
+      "containerDurationSeconds": 24,
+      "videoFrames": 720,
+      "videoStreamMatchesMasterDecodedHash": "de005bf61bfa342883fccf78458af5897e0ae7944c169d95d05d07fad9ab5678",
+      "audio": null
+    }
+  },
+  "editing": {
+    "method": "Remotion source timeline with original brand animation and authentic still captures. The scenes are separate captures, not a continuous recording.",
+    "visibleClick": false,
+    "storeScreenshotCount": 4,
+    "limitations": [
+      "The command clip did not show a clear pointer hover or click, so the trailer uses an authentic pointer-over-command still.",
+      "The Store GUI screenshot was not captured.",
+      "The audio stream was probed, but the final mix was not listened to during this check."
+    ]
+  },
+  "licenses": {
+    "soundEffect": {
+      "name": "Mixkit swoosh-quick",
+      "source": "https://assets.mixkit.co/active_storage/sfx/166/166-preview.mp3",
+      "license": "Mixkit Sound Effects Free License",
+      "licenseUrl": "https://mixkit.co/license/modal/sfxFree/",
+      "note": "The MP3 is ignored by Git. The effect is included in the video master; it is not distributed as a standalone file."
+    },
+    "font": {
+      "name": "Google Sans Flex",
+      "license": "SIL Open Font License",
+      "licensePath": "assets/fonts/OFL.txt"
+    },
+    "screenshotsAndArtwork": "Original product captures and Softstage composition artwork. No third-party photo assets are used."
+  },
+  "checks": {
+    "remotionBuild": "passed",
+    "videoProbe": "passed",
+    "visualReview": "sampled keyframes and scene states reviewed; the first output frame is visible and the output matches the result capture",
+    "subjectiveAudioReview": "not performed"
+  }
+}
