@@ -9,7 +9,7 @@
          IgnorableNamespaces="uap uap10 rescap com desktop4 desktop5">
   <Identity Name="TolaniFagbenja.Softstage"
             Publisher="CN=6E891E62-87B5-4E29-AB6B-9C47CEB67CAB"
-            Version="1.0.0.0"
+            Version="1.0.1.0"
             ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Softstage</DisplayName>

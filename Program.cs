@@ -111,11 +111,13 @@ internal sealed class GenerateCompletionToast : Form
     public GenerateCompletionToast(string output)
     {
         _output = Path.GetFullPath(output);
+        SuspendLayout();
         Text = "Softstage created an image";
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
         AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         StartPosition = FormStartPosition.Manual;
         Size = new Size(360, 152);
         BackColor = BackdropPalette.Surface;
@@ -200,6 +202,7 @@ internal sealed class GenerateCompletionToast : Form
             UpdateRoundedRegion();
             _timer.Start();
         };
+        ResumeLayout(performLayout: true);
     }
 
     protected override bool ShowWithoutActivation => true;
@@ -955,6 +958,9 @@ internal static class SelfCheckRunner
             ?? throw new InvalidOperationException("Self-check failed: completion toast tooltip was not found."));
         var workArea = Screen.FromHandle(toast.Handle).WorkingArea;
         var roundedCornerInset = (int)Math.Ceiling(8 * toast.DeviceDpi / 96d) + 2;
+        var expectedDpiScale = toast.DeviceDpi / 96d;
+        var expectedActionHeight = (int)Math.Round(32 * expectedDpiScale);
+        var expectedFolderHeight = (int)Math.Round(22 * expectedDpiScale);
 
         Assert(content.Bounds == toast.DisplayRectangle && VisibleChildrenFit(content),
             "Completion toast content fits inside its client area");
@@ -975,7 +981,7 @@ internal static class SelfCheckRunner
         {
             DeleteObject(nativeRegion);
         }
-        Assert(actionButtons.Length == 2 && actionButtons.All(button => button.Height == 32 && button.Margin == Padding.Empty) &&
+        Assert(actionButtons.Length == 2 && actionButtons.All(button => Math.Abs(button.Height - expectedActionHeight) <= 1 && button.Margin == Padding.Empty) &&
             VisibleChildrenFit(actions), "Completion toast actions are fully visible and have no layout margin clipping");
         var dismissGlyphWidth = TextRenderer.MeasureText(closeButton.Text, closeButton.Font, Size.Empty,
             TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width;
@@ -983,7 +989,7 @@ internal static class SelfCheckRunner
             dismissGlyphWidth <= closeButton.ClientSize.Width - 6,
             "Completion toast has a visible accessible dismiss button");
         Assert(!fileLabel.AutoSize && !folderLabel.AutoSize && fileLabel.AutoEllipsis && folderLabel.AutoEllipsis &&
-            folderLabel.Height == 22 &&
+            Math.Abs(folderLabel.Height - expectedFolderHeight) <= 1 &&
             TextRenderer.MeasureText(folderLabel.Text, folderLabel.Font).Width > folderLabel.ClientSize.Width &&
             toolTip.GetToolTip(folderLabel) == Path.GetDirectoryName(output),
             "Long completion paths truncate cleanly and expose the full path on hover");
