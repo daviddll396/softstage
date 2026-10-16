@@ -134,7 +134,7 @@ internal sealed class GenerateCompletionToast : Form
         var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = BackdropPalette.Surface };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 28));
-        var title = new Label { Text = "PNG created", Dock = DockStyle.Fill, Margin = Padding.Empty, ForeColor = BackdropPalette.Text, Font = BackdropTypography.Create(11F, FontStyle.Bold) };
+        var title = new Label { Text = "Stage created", Dock = DockStyle.Fill, Margin = Padding.Empty, ForeColor = BackdropPalette.Text, Font = BackdropTypography.Create(11F, FontStyle.Bold) };
         var closeButton = new BackdropButton("×")
         {
             Width = 28,
@@ -176,6 +176,7 @@ internal sealed class GenerateCompletionToast : Form
         var folderButton = CreateActionButton("Show folder");
         folderButton.Click += (_, _) => Open(folderPath);
         var imageButton = CreateActionButton("Open image", primary: true);
+        imageButton.Margin = new Padding(0, 0, 8, 0);
         imageButton.Click += (_, _) => Open(_output);
         actions.Controls.Add(folderButton);
         actions.Controls.Add(imageButton);
@@ -951,6 +952,8 @@ internal static class SelfCheckRunner
         content.PerformLayout();
         var actions = Descendants(toast).OfType<FlowLayoutPanel>().Single();
         var actionButtons = Descendants(actions).OfType<BackdropButton>().ToArray();
+        var folderButton = actionButtons.Single(button => button.AccessibleName == "Show folder");
+        var imageButton = actionButtons.Single(button => button.AccessibleName == "Open image");
         var closeButton = Descendants(toast).OfType<BackdropButton>().Single(button => button.AccessibleName == "Dismiss notification");
         var fileLabel = Descendants(toast).OfType<Label>().Single(label => label.AccessibleName == "Created file");
         var folderLabel = Descendants(toast).OfType<Label>().Single(label => label.AccessibleName == "Output folder");
@@ -960,6 +963,7 @@ internal static class SelfCheckRunner
         var roundedCornerInset = (int)Math.Ceiling(8 * toast.DeviceDpi / 96d) + 2;
         var expectedDpiScale = toast.DeviceDpi / 96d;
         var expectedActionHeight = (int)Math.Round(32 * expectedDpiScale);
+        var expectedActionGap = (int)Math.Round(8 * expectedDpiScale);
         var expectedFolderHeight = (int)Math.Round(22 * expectedDpiScale);
 
         Assert(content.Bounds == toast.DisplayRectangle && VisibleChildrenFit(content),
@@ -981,8 +985,10 @@ internal static class SelfCheckRunner
         {
             DeleteObject(nativeRegion);
         }
-        Assert(actionButtons.Length == 2 && actionButtons.All(button => Math.Abs(button.Height - expectedActionHeight) <= 1 && button.Margin == Padding.Empty) &&
-            VisibleChildrenFit(actions), "Completion toast actions are fully visible and have no layout margin clipping");
+        Assert(actionButtons.Length == 2 && actionButtons.All(button => Math.Abs(button.Height - expectedActionHeight) <= 1) &&
+            folderButton.Margin == Padding.Empty && imageButton.Margin == new Padding(0, 0, expectedActionGap, 0) &&
+            folderButton.Left - imageButton.Right == expectedActionGap && VisibleChildrenFit(actions),
+            "Completion toast actions are fully visible with an 8-logical-pixel gap");
         var dismissGlyphWidth = TextRenderer.MeasureText(closeButton.Text, closeButton.Font, Size.Empty,
             TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Width;
         Assert(closeButton.Bounds.Width > 0 && closeButton.Bounds.Height > 0 && closeButton.AccessibleName == "Dismiss notification" &&
