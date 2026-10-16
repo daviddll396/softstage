@@ -42,6 +42,9 @@ internal sealed class BackgroundSettingsDialog : Form
 
     public BackgroundSettingsDialog(AppSettings settings)
     {
+        SuspendLayout();
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         Text = "Background";
         AccessibleName = "Background settings";
         StartPosition = FormStartPosition.CenterParent;
@@ -49,7 +52,6 @@ internal sealed class BackgroundSettingsDialog : Form
         ShowInTaskbar = false;
         MaximizeBox = false;
         MinimizeBox = false;
-        AutoScaleMode = AutoScaleMode.Font;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Font = BackdropTypography.Create(9.5F);
@@ -157,6 +159,7 @@ internal sealed class BackgroundSettingsDialog : Form
         _color1.ColorChanged += (_, _) => DraftChanged?.Invoke(this, EventArgs.Empty);
         _color2.ColorChanged += (_, _) => DraftChanged?.Invoke(this, EventArgs.Empty);
         UpdateVisibleFields();
+        ResumeLayout(performLayout: true);
     }
 
     private void UpdateVisibleFields()

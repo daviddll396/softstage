@@ -871,6 +871,7 @@ internal sealed class BackdropNumberSelector : UserControl
     private decimal _maximum = 100;
     private decimal _increment = 1;
     private decimal _value;
+    private Font? _scaledEditorFont;
     private bool _thousandsSeparator;
 
     public BackdropNumberSelector()
@@ -1006,7 +1007,7 @@ internal sealed class BackdropNumberSelector : UserControl
         base.OnFontChanged(e);
         if (_valueEditor is null)
             return;
-        _valueEditor.Font = Font;
+        UpdateEditorFont();
         _decreaseButton.Font = Font;
         _increaseButton.Font = Font;
         LayoutChildren();
@@ -1018,10 +1019,28 @@ internal sealed class BackdropNumberSelector : UserControl
         LayoutChildren();
     }
 
+    protected override void OnLayout(LayoutEventArgs e)
+    {
+        base.OnLayout(e);
+        UpdateEditorFont();
+        LayoutChildren();
+    }
+
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
         base.OnDpiChangedAfterParent(e);
+        UpdateEditorFont();
         LayoutChildren();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            _scaledEditorFont?.Dispose();
+            _scaledEditorFont = null;
+        }
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -1137,6 +1156,37 @@ internal sealed class BackdropNumberSelector : UserControl
         var editorTop = (ClientSize.Height - editorHeight) / 2;
         _valueEditor.Bounds = new Rectangle(editorLeft, editorTop, Math.Max(0, editorRight - editorLeft), editorHeight);
     }
+
+    private void UpdateEditorFont()
+    {
+        if (_valueEditor is null)
+            return;
+
+        var dpiScale = DeviceDpi / 96f;
+        if (Math.Abs(dpiScale - 1f) < 0.001f)
+        {
+            if (!ReferenceEquals(_valueEditor.Font, Font))
+                _valueEditor.Font = Font;
+            _scaledEditorFont?.Dispose();
+            _scaledEditorFont = null;
+            return;
+        }
+
+        var scaledSize = Font.SizeInPoints * dpiScale;
+        if (_scaledEditorFont is null || _scaledEditorFont.SizeInPoints != scaledSize ||
+            !_scaledEditorFont.FontFamily.Equals(Font.FontFamily) || _scaledEditorFont.Style != Font.Style)
+        {
+            var nextFont = new Font(Font.FontFamily, scaledSize, Font.Style, GraphicsUnit.Point);
+            _valueEditor.Font = nextFont;
+            _scaledEditorFont?.Dispose();
+            _scaledEditorFont = nextFont;
+        }
+        else if (!ReferenceEquals(_valueEditor.Font, _scaledEditorFont))
+        {
+            _valueEditor.Font = _scaledEditorFont;
+        }
+    }
+
 }
 internal sealed class SegmentedChoiceControl : UserControl
 {

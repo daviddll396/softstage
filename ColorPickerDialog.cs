@@ -44,6 +44,9 @@ internal sealed class BackdropColorPickerDialog : Form
 
     public BackdropColorPickerDialog(Color initialColor)
     {
+        SuspendLayout();
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         _current = Opaque(initialColor);
         _candidate = _current;
         Text = "Custom color";
@@ -52,7 +55,6 @@ internal sealed class BackdropColorPickerDialog : Form
         FormBorderStyle = FormBorderStyle.FixedDialog;
         ShowInTaskbar = false;
         MaximizeBox = MinimizeBox = false;
-        AutoScaleMode = AutoScaleMode.Font;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Font = BackdropTypography.Create(9.5F);
@@ -122,6 +124,7 @@ internal sealed class BackdropColorPickerDialog : Form
         CancelButton = _cancel;
         SetCandidate(_current, updatePicker: true, updateHex: true);
         Shown += (_, _) => _hex.Focus();
+        ResumeLayout(performLayout: true);
     }
 
     protected override void OnHandleCreated(EventArgs e)

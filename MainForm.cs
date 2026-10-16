@@ -124,11 +124,13 @@ internal sealed class MainForm : Form
 
     public MainForm(AppSettings settings, IReadOnlyList<string>? initialPaths = null, string? previewFile = null)
     {
+        SuspendLayout();
         var initialSettings = settings.IsValid() ? settings.Copy() : new AppSettings();
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
         Text = "Softstage";
         Icon = LoadWindowIcon();
         StartPosition = FormStartPosition.CenterScreen;
-        AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = SizeFromClientSize(new Size(800, 600));
         ClientSize = new Size(960, 720);
         Font = BackdropTypography.Create(9.5F);
@@ -188,6 +190,7 @@ internal sealed class MainForm : Form
         }
 
         SetDropTarget(this);
+        ResumeLayout(performLayout: true);
     }
 
     protected override void OnHandleCreated(EventArgs e)
