@@ -790,9 +790,61 @@ internal sealed class BackdropDropdown : UserControl
     }
 }
 
+internal sealed class BackdropTextBoxDpiFont : IDisposable
+{
+    private Font? _scaledFont;
+
+    public void Apply(TextBox editor, Font sourceFont, int deviceDpi)
+    {
+        var dpiScale = deviceDpi / 96f;
+        if (Math.Abs(dpiScale - 1f) < 0.001f)
+        {
+            var previousFont = _scaledFont;
+            _scaledFont = null;
+            if (!ReferenceEquals(editor.Font, sourceFont))
+                editor.Font = sourceFont;
+            previousFont?.Dispose();
+            return;
+        }
+
+        var scaledSize = sourceFont.SizeInPoints * dpiScale;
+        if (_scaledFont is null || _scaledFont.SizeInPoints != scaledSize ||
+            !_scaledFont.FontFamily.Equals(sourceFont.FontFamily) || _scaledFont.Style != sourceFont.Style)
+        {
+            var nextFont = new Font(sourceFont.FontFamily, scaledSize, sourceFont.Style, GraphicsUnit.Point);
+            var previousFont = _scaledFont;
+            _scaledFont = nextFont;
+            try
+            {
+                if (!ReferenceEquals(editor.Font, nextFont))
+                    editor.Font = nextFont;
+            }
+            catch
+            {
+                _scaledFont = previousFont;
+                nextFont.Dispose();
+                throw;
+            }
+
+            previousFont?.Dispose();
+        }
+        else if (!ReferenceEquals(editor.Font, _scaledFont))
+        {
+            editor.Font = _scaledFont;
+        }
+    }
+
+    public void Dispose()
+    {
+        _scaledFont?.Dispose();
+        _scaledFont = null;
+    }
+}
+
 internal sealed class BackdropTextInputHost : UserControl
 {
     private readonly TextBox _editor;
+    private readonly BackdropTextBoxDpiFont _editorDpiFont = new();
 
     public BackdropTextInputHost(TextBox editor)
     {
@@ -817,14 +869,27 @@ internal sealed class BackdropTextInputHost : UserControl
         _editor.FontChanged += (_, _) => LayoutEditor();
         Controls.Add(_editor);
         SizeChanged += (_, _) => LayoutEditor();
-        FontChanged += (_, _) => LayoutEditor();
+        FontChanged += (_, _) => UpdateEditorFontAndLayout();
         LayoutEditor();
+    }
+
+    protected override void OnLayout(LayoutEventArgs e)
+    {
+        base.OnLayout(e);
+        UpdateEditorFontAndLayout();
     }
 
     protected override void OnDpiChangedAfterParent(EventArgs e)
     {
         base.OnDpiChangedAfterParent(e);
-        LayoutEditor();
+        UpdateEditorFontAndLayout();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+            _editorDpiFont.Dispose();
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) =>
@@ -860,6 +925,15 @@ internal sealed class BackdropTextInputHost : UserControl
         _editor.Bounds = new Rectangle(horizontalInset, editorTop,
             Math.Max(0, ClientSize.Width - horizontalInset * 2), editorHeight);
     }
+
+    private void UpdateEditorFontAndLayout()
+    {
+        if (_editor is null || _editor.IsDisposed)
+            return;
+
+        _editorDpiFont.Apply(_editor, Font, DeviceDpi);
+        LayoutEditor();
+    }
 }
 
 internal sealed class BackdropNumberSelector : UserControl
@@ -871,7 +945,7 @@ internal sealed class BackdropNumberSelector : UserControl
     private decimal _maximum = 100;
     private decimal _increment = 1;
     private decimal _value;
-    private Font? _scaledEditorFont;
+    private readonly BackdropTextBoxDpiFont _editorDpiFont = new();
     private bool _thousandsSeparator;
 
     public BackdropNumberSelector()
@@ -1038,8 +1112,7 @@ internal sealed class BackdropNumberSelector : UserControl
         base.Dispose(disposing);
         if (disposing)
         {
-            _scaledEditorFont?.Dispose();
-            _scaledEditorFont = null;
+            _editorDpiFont.Dispose();
         }
     }
 
@@ -1159,32 +1232,8 @@ internal sealed class BackdropNumberSelector : UserControl
 
     private void UpdateEditorFont()
     {
-        if (_valueEditor is null)
-            return;
-
-        var dpiScale = DeviceDpi / 96f;
-        if (Math.Abs(dpiScale - 1f) < 0.001f)
-        {
-            if (!ReferenceEquals(_valueEditor.Font, Font))
-                _valueEditor.Font = Font;
-            _scaledEditorFont?.Dispose();
-            _scaledEditorFont = null;
-            return;
-        }
-
-        var scaledSize = Font.SizeInPoints * dpiScale;
-        if (_scaledEditorFont is null || _scaledEditorFont.SizeInPoints != scaledSize ||
-            !_scaledEditorFont.FontFamily.Equals(Font.FontFamily) || _scaledEditorFont.Style != Font.Style)
-        {
-            var nextFont = new Font(Font.FontFamily, scaledSize, Font.Style, GraphicsUnit.Point);
-            _valueEditor.Font = nextFont;
-            _scaledEditorFont?.Dispose();
-            _scaledEditorFont = nextFont;
-        }
-        else if (!ReferenceEquals(_valueEditor.Font, _scaledEditorFont))
-        {
-            _valueEditor.Font = _scaledEditorFont;
-        }
+        if (_valueEditor is not null)
+            _editorDpiFont.Apply(_valueEditor, Font, DeviceDpi);
     }
 
 }
