@@ -4,11 +4,25 @@ Softstage combines up to nine pictures into one PNG. The window shows a live pre
 
 Image processing runs on your device. Softstage does not upload pictures, require an account, or include telemetry or analytics.
 
+## Download
+
+**Windows**
+
+- **Where:** Microsoft Store
+- **Status:** Microsoft Store: coming soon. The listing is not live yet.
+- **Guidance:** Install from the Microsoft Store once it is listed. There is no download link yet.
+
+**Mac**
+
+- **Where:** Download the `.dmg` from [GitHub Releases](https://github.com/daviddll396/softstage/releases/latest). It is not on the Mac App Store. Requires macOS 13.0 or later.
+- **Status:** New build, not yet tested on macOS. It is unsigned and not notarized by Apple, so macOS blocks the first launch.
+- **Guidance:** Open the DMG, drag Softstage to Applications, then right-click it, choose Open, and click Open in the dialog. If macOS still blocks it, run `xattr -dr com.apple.quarantine /Applications/Softstage.app` in Terminal. If it fails, report it in GitHub Issues for this repository. Full steps are in [Install Softstage for Mac](mac/packaging/INSTALL.md).
+
 ## License and distribution
 
 The native Windows app source files listed in the repository [LICENSE](LICENSE) are licensed under MIT. The website, React Bits components, libraries, fonts, sample artwork, logos, and other assets are outside that grant unless their own notices say otherwise. See [third-party notices](docs/legal/third-party-notices.md).
 
-Softstage is planned as a free app. GitHub releases and the Microsoft Store are distribution targets. No public binary or Store submission is ready yet. See the [release checklist](docs/release-checklist.md) for remaining release steps.
+Softstage is planned as a free app. Windows users will get it from the Microsoft Store, which is not live yet. Mac users download the DMG from GitHub Releases. See the [release checklist](docs/release-checklist.md) for remaining release steps.
 
 ## Website, privacy, and support
 
@@ -63,11 +77,11 @@ The command prints the output path when it has a console. When Explorer starts i
 
 ## Windows installer candidate
 
-The Windows release target is a downloadable Softstage installer for Windows 11 on x64 hardware. The installer includes the .NET runtime. Users do not need the SDK, administrator access, Developer Mode, or a test certificate. It installs for the current user in `%LOCALAPPDATA%\Programs\Backdrop`.
+Windows users will get Softstage from the Microsoft Store, so this installer is a candidate for testing, not a public download. It targets Windows 11 on x64 hardware. The installer includes the .NET runtime. Users do not need the SDK, administrator access, Developer Mode, or a test certificate. It installs for the current user in `%LOCALAPPDATA%\Programs\Backdrop`.
 
 The installer registers **Create composition with Softstage** for Explorer's **Show more options** menu. Actual menu visibility still needs the manual Explorer check. The command sends the selected pictures to one composition. Use **Remove Explorer menu** in the app to disable it, or **Enable Explorer menu** to enable it again. The consumer installer uses a classic shell command. The older sparse package scripts are for development only.
 
-The installer candidate is unsigned. Windows can show a SmartScreen warning. GitHub release publication is pending the clean-machine and real Explorer checks in [the release checklist](docs/release-checklist.md). Microsoft Store packaging and certification remain separate steps.
+The installer candidate is unsigned. Windows can show a SmartScreen warning. Publication is pending the clean-machine and real Explorer checks in [the release checklist](docs/release-checklist.md). Microsoft Store packaging and certification remain separate steps.
 
 ### Build the installer
 

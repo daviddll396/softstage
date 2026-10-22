@@ -1,0 +1,154 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Softstage.Mac.MainWindow"
+        Title="Softstage"
+        Width="1180" Height="900"
+        MinWidth="980" MinHeight="680"
+        Background="{StaticResource WindowBrush}"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource AppFont}"
+        FontSize="14">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Header: name, tagline, and the app-level actions -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="28,22,28,16">
+      <StackPanel Spacing="2" VerticalAlignment="Center">
+        <TextBlock Text="Softstage" FontSize="24" FontWeight="Bold" />
+        <TextBlock Classes="muted" Text="Compose on your device." />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="6" HorizontalAlignment="Right">
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+          <Button x:Name="SavePreferencesButton" Content="Save preferences" Click="OnSavePreferencesClick" />
+          <Button x:Name="FinderToggleButton" Content="Enable Finder right-click" Click="OnFinderToggleClick" />
+        </StackPanel>
+        <TextBlock x:Name="FinderStatusText" Classes="muted" FontSize="12" HorizontalAlignment="Right" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Body: sidebar with settings and images, preview on the right -->
+    <Grid Grid.Row="1" ColumnDefinitions="340,*" Margin="28,0,28,0">
+
+      <ScrollViewer Grid.Column="0" Margin="0,0,10,0" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="14" Margin="0,0,14,0">
+
+          <Border Classes="card">
+            <StackPanel Spacing="12">
+              <TextBlock Classes="section" Text="Composition" />
+
+              <StackPanel Spacing="5">
+                <TextBlock Classes="label" Text="Canvas ratio" />
+                <ComboBox x:Name="RatioBox" HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <StackPanel Spacing="5">
+                <TextBlock Classes="label" Text="Layout" />
+                <ComboBox x:Name="LayoutBox" HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <StackPanel Spacing="5">
+                <TextBlock Classes="label" Text="Output size" ToolTip.Tip="Long edge in pixels. Canvas ratio determines the other edge." />
+                <NumericUpDown x:Name="OutputWidthBox" Minimum="640" Maximum="4096" Increment="10" FormatString="0" HorizontalAlignment="Stretch" ToolTip.Tip="Long edge in pixels, from 640 to 4096." />
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,12,*">
+                <StackPanel Spacing="5">
+                  <TextBlock Classes="label" Text="Padding (%)" />
+                  <NumericUpDown x:Name="PaddingBox" Minimum="0" Maximum="25" Increment="1" FormatString="0" HorizontalAlignment="Stretch" ToolTip.Tip="Padding around each picture, from 0 to 25 percent of the canvas." />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5">
+                  <TextBlock Classes="label" Text="Shadow (%)" />
+                  <NumericUpDown x:Name="ShadowBox" Minimum="0" Maximum="40" Increment="1" FormatString="0.##" HorizontalAlignment="Stretch" ToolTip.Tip="Picture shadow strength, from 0 to 40 percent." />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card">
+            <StackPanel Spacing="12">
+              <TextBlock Classes="section" Text="Background" />
+
+              <StackPanel Spacing="5">
+                <TextBlock Classes="label" Text="Background mode" />
+                <ComboBox x:Name="BackgroundModeBox" HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <StackPanel x:Name="LightenRow" Spacing="5">
+                <TextBlock Classes="label" Text="Lighten colors (%)" ToolTip.Tip="Blend automatic gradient colors with white by this percentage. Zero keeps the sampled colors." />
+                <NumericUpDown x:Name="LightenBox" Minimum="0" Maximum="100" Increment="1" FormatString="0" HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <StackPanel x:Name="Color1Row" Spacing="5">
+                <TextBlock Classes="label" Text="Base color" />
+                <Grid ColumnDefinitions="*,10,44">
+                  <TextBox x:Name="Color1Box" Watermark="#RRGGBB" MaxLength="7" />
+                  <Border Grid.Column="2" x:Name="Color1Swatch" CornerRadius="8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="36" />
+                </Grid>
+              </StackPanel>
+
+              <StackPanel x:Name="Color2Row" Spacing="5">
+                <TextBlock Classes="label" Text="End color" />
+                <Grid ColumnDefinitions="*,10,44">
+                  <TextBox x:Name="Color2Box" Watermark="#RRGGBB" MaxLength="7" />
+                  <Border Grid.Column="2" x:Name="Color2Swatch" CornerRadius="8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="36" />
+                </Grid>
+              </StackPanel>
+
+              <StackPanel x:Name="PatternRow" Spacing="5">
+                <TextBlock Classes="label" Text="Pattern style" />
+                <ComboBox x:Name="PatternBox" HorizontalAlignment="Stretch" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <Border x:Name="ImagesPanel" Classes="card" DragDrop.AllowDrop="True">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="section" Text="Images" />
+                <TextBlock x:Name="ImageCountText" Grid.Column="1" Classes="muted" />
+              </Grid>
+
+              <Button x:Name="AddImagesButton" Classes="primary" Content="Add images" HorizontalAlignment="Stretch" Click="OnAddImagesClick" />
+
+              <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8" MinHeight="140">
+                <Grid>
+                  <TextBlock x:Name="EmptyListText" Classes="muted" Text="No images yet." HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="ImageList" Spacing="6" />
+                  </ScrollViewer>
+                </Grid>
+              </Border>
+
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Text="Add or drop up to 9 images." />
+                <Button x:Name="ClearImagesButton" Grid.Column="1" Content="Clear" Click="OnClearImagesClick" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+        </StackPanel>
+      </ScrollViewer>
+
+      <Border Grid.Column="1" Background="{StaticResource PreviewBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+        <Grid>
+          <TextBlock Classes="section" FontSize="12" Margin="18,16,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Text="PREVIEW" />
+          <Image x:Name="PreviewImage" Stretch="Uniform" Margin="28,46,28,46" IsVisible="False" />
+          <TextBlock x:Name="PreviewPlaceholder" Classes="muted" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center" Text="A sample composition will appear here." />
+          <TextBlock x:Name="PreviewCaption" Classes="muted" FontSize="12" Margin="18,0,18,14" VerticalAlignment="Bottom" HorizontalAlignment="Left" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Footer: status and the PNG actions -->
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="28,16,28,22">
+      <TextBlock x:Name="StatusText" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button x:Name="CancelButton" Content="Cancel" IsVisible="False" Click="OnCancelClick" />
+        <Button x:Name="OpenImageButton" Content="Open image" IsVisible="False" Click="OnOpenImageClick" />
+        <Button x:Name="ShowFolderButton" Content="Show folder" IsVisible="False" Click="OnShowFolderClick" />
+        <Button x:Name="CreatePngButton" Classes="primary" Content="Create PNG" MinWidth="140" Click="OnCreatePngClick" />
+      </StackPanel>
+    </Grid>
+
+  </Grid>
+</Window>

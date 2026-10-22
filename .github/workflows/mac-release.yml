@@ -1,0 +1,77 @@
+name: mac-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (X.Y.Z). Ignored for mac-v* tag pushes, which use the tag."
+        required: true
+        type: string
+        default: "0.1.0"
+  push:
+    tags:
+      - "mac-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/mac-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/mac-v}"
+          else
+            VERSION="$INPUT_VERSION"
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be X.Y.Z, got '$VERSION'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building Softstage for Mac $VERSION"
+
+      - name: Build and package arm64
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash mac/packaging/build-mac.sh "$VERSION" arm64
+
+      - name: Build and package x64
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash mac/packaging/build-mac.sh "$VERSION" x64
+
+      - name: Upload DMGs and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: softstage-mac-${{ steps.version.outputs.version }}
+          path: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/mac-v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$TAG" dist/*.dmg dist/*.dmg.sha256 \
+            --title "Softstage for Mac $VERSION" \
+            --notes-file mac/packaging/INSTALL.md

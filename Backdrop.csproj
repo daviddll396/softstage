@@ -11,7 +11,7 @@
     <AssemblyTitle>Softstage</AssemblyTitle>
     <Title>Softstage</Title>
     <Product>Softstage</Product>
-    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;site/node_modules/**;site/.next/**;site/out/**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;site/node_modules/**;site/.next/**;site/out/**;core/**;mac/**</DefaultItemExcludes>
   </PropertyGroup>
   <PropertyGroup Condition="'$(SoftstageStoreBuild)' == 'true'">
     <DefineConstants>$(DefineConstants);SOFTSTAGE_STORE</DefineConstants>

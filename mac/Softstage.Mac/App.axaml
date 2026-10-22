@@ -1,0 +1,114 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Softstage.Mac.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <!-- Palette from BackdropPalette in the Windows app (BackdropControls.cs). -->
+      <SolidColorBrush x:Key="WindowBrush">#18191C</SolidColorBrush>
+      <SolidColorBrush x:Key="SurfaceBrush">#202125</SolidColorBrush>
+      <SolidColorBrush x:Key="FieldBrush">#2B2C31</SolidColorBrush>
+      <SolidColorBrush x:Key="BorderBrush">#393B41</SolidColorBrush>
+      <SolidColorBrush x:Key="TextBrush">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="MutedBrush">#9EA0A7</SolidColorBrush>
+      <SolidColorBrush x:Key="PreviewBrush">#121316</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentBrush">#E7E8EB</SolidColorBrush>
+      <SolidColorBrush x:Key="AccentTextBrush">#191A1D</SolidColorBrush>
+      <SolidColorBrush x:Key="SelectionBrush">#44464D</SolidColorBrush>
+      <SolidColorBrush x:Key="FocusBrush">#BEC1C9</SolidColorBrush>
+      <SolidColorBrush x:Key="DisabledTextBrush">#5E6068</SolidColorBrush>
+
+      <FontFamily x:Key="AppFont">avares://Softstage/Assets/Fonts#Google Sans Flex</FontFamily>
+
+      <!-- Fluent theme keys, so built-in controls pick up the same palette. -->
+      <SolidColorBrush x:Key="ThemeAccentBrush">#E7E8EB</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeAccentBrush2">#E7E8EB</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeAccentBrush3">#D5D7DD</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeAccentBrush4">#BEC1C9</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeForegroundBrush">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeBorderLowBrush">#393B41</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeBorderMidBrush">#4A4D55</SolidColorBrush>
+      <SolidColorBrush x:Key="ThemeBorderHighBrush">#5C5F68</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlBackground">#2B2C31</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#2F3036</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlBackgroundFocused">#2B2C31</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlBorderBrush">#393B41</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#4A4D55</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused">#BEC1C9</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlForeground">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground">#9EA0A7</SolidColorBrush>
+      <SolidColorBrush x:Key="TextControlSelectionHighlightColor">#44464D</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBackground">#2B2C31</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBackgroundPointerOver">#34363C</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBackgroundPressed">#24262B</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBackgroundDisabled">#222328</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBorderBrush">#393B41</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver">#4A4D55</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonBorderBrushDisabled">#2F3136</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonForeground">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonForegroundPointerOver">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonForegroundPressed">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="ButtonForegroundDisabled">#5E6068</SolidColorBrush>
+      <SolidColorBrush x:Key="ComboBoxBackground">#2B2C31</SolidColorBrush>
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#2F3036</SolidColorBrush>
+      <SolidColorBrush x:Key="ComboBoxBorderBrush">#393B41</SolidColorBrush>
+      <SolidColorBrush x:Key="ComboBoxForeground">#EBECEF</SolidColorBrush>
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground">#202125</SolidColorBrush>
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#393B41</SolidColorBrush>
+      <SolidColorBrush x:Key="ListBoxItemBackgroundSelected">#44464D</SolidColorBrush>
+      <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+      <Setter Property="Background" Value="#D5D7DD" />
+      <Setter Property="BorderBrush" Value="#D5D7DD" />
+    </Style>
+    <Style Selector="Button.primary:disabled">
+      <Setter Property="Background" Value="#3A3C42" />
+      <Setter Property="BorderBrush" Value="#3A3C42" />
+      <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+    </Style>
+
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+    </Style>
+
+    <Style Selector="Button">
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="14,7" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="MinHeight" Value="36" />
+    </Style>
+  </Application.Styles>
+
+</Application>
