@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Softstage.Mac.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="Assets\Fonts\GoogleSansFlex-Regular.ttf" />
     <AvaloniaResource Include="Assets\Fonts\GoogleSansFlex-Bold.ttf" />
     <AvaloniaResource Include="Assets\Fonts\OFL.txt" />

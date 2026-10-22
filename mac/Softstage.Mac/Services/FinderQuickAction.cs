@@ -15,13 +15,23 @@ internal static class FinderQuickAction
     // Characters that would break the double-quoted command in document.wflow.
     private static readonly char[] UnsafePathCharacters = ['"', '$', '`', '\\'];
 
-    public static string InstalledPath => Path.Combine(AppPaths.HomeFolder, "Library", "Services", BundleName);
+    /// <summary>Tests set this to a temporary folder so they never write to the real Services folder. Null in normal runs.</summary>
+    internal static string? ServicesFolderOverride { get; set; }
+
+    /// <summary>Tests set this so the macOS-only checks can run on other systems. Null in normal runs.</summary>
+    internal static bool? IsMacOSOverride { get; set; }
+
+    private static bool IsMacOS => IsMacOSOverride ?? OperatingSystem.IsMacOS();
+
+    public static string ServicesFolder => ServicesFolderOverride ?? Path.Combine(AppPaths.HomeFolder, "Library", "Services");
+
+    public static string InstalledPath => Path.Combine(ServicesFolder, BundleName);
 
     public static bool IsInstalled => Directory.Exists(InstalledPath);
 
     public static void Install(string executablePath)
     {
-        if (!OperatingSystem.IsMacOS())
+        if (!IsMacOS)
             throw new SoftstageException("Finder right-click is available on macOS only.");
 
         if (Path.GetFileName(executablePath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))

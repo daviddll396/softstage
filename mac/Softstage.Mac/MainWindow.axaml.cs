@@ -301,7 +301,8 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void AddImages(IEnumerable<string> candidates)
+    // Internal so tests can feed paths in: the file picker needs a platform storage provider that headless runs do not have.
+    internal void AddImages(IEnumerable<string> candidates)
     {
         var incoming = candidates.ToList();
         if (incoming.Count == 0)

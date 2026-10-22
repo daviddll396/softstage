@@ -1,0 +1,82 @@
+name: mac-ci
+
+# Tests, a publish smoke test, and plist lint for the Mac app. Read-only: no release, tag, or artifact upload.
+on:
+  push:
+    branches:
+      - main
+      - mac-app-downloads
+    paths:
+      - "core/**"
+      - "mac/**"
+      - ".github/workflows/mac-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-smoke:
+    runs-on: macos-14
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Run Mac app tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet test mac/Softstage.Mac.Tests/Softstage.Mac.Tests.csproj -c Release
+
+      - name: Publish Mac app for Apple silicon
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish mac/Softstage.Mac/Softstage.Mac.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=false -o "$RUNNER_TEMP/app"
+
+      - name: CLI smoke test on the published executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          exe="$RUNNER_TEMP/app/Softstage"
+          smoke="$RUNNER_TEMP/smoke"
+          mkdir -p "$smoke"
+
+          if [ ! -x "$exe" ]; then
+            echo "Published executable is missing or not executable: $exe" >&2
+            exit 1
+          fi
+
+          # The demo photos are git-tracked, so copy them into a temp folder. The output goes there too.
+          cp "assets/site/hero-r3/arch.png" "assets/site/hero-r3/sphere.png" "assets/site/hero-r3/stairway.png" "$smoke/"
+
+          set +e
+          "$exe" --generate "$smoke/arch.png" "$smoke/sphere.png" "$smoke/stairway.png" > "$smoke/stdout.txt" 2> "$smoke/stderr.txt"
+          status=$?
+          set -e
+
+          cat "$smoke/stderr.txt"
+          if [ "$status" -ne 0 ]; then
+            echo "Softstage --generate exited with status $status." >&2
+            exit 1
+          fi
+
+          output="$smoke/softstage-composition.png"
+          if [ ! -s "$output" ]; then
+            echo "Expected a non-empty file at $output." >&2
+            exit 1
+          fi
+          echo "Wrote $output."
+
+      - name: Lint plist files
+        shell: bash
+        run: |
+          set -euo pipefail
+          plutil -lint "mac/packaging/quick-action/Create composition with Softstage.workflow/Contents/Info.plist"
+          plutil -lint "mac/packaging/quick-action/Create composition with Softstage.workflow/Contents/document.wflow"
+          plutil -lint "mac/packaging/Info.plist.template"

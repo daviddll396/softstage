@@ -17,11 +17,7 @@ internal static class Program
         if (args.Length == 0)
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
 
-        if (args[0] == "--generate")
-            return Generate(args.Skip(1).ToArray());
-
-        Console.Error.WriteLine(Usage);
-        return 2;
+        return Run(args, Console.Out, Console.Error);
     }
 
     public static AppBuilder BuildAvaloniaApp() =>
@@ -29,11 +25,21 @@ internal static class Program
             .UsePlatformDetect()
             .LogToTrace();
 
-    private static int Generate(IReadOnlyList<string> paths)
+    /// <summary>The command-line path, without a window. Results go to <paramref name="stdout"/>, messages to <paramref name="stderr"/>.</summary>
+    internal static int Run(string[] args, TextWriter stdout, TextWriter stderr)
+    {
+        if (args.Length > 0 && args[0] == "--generate")
+            return Generate(args.Skip(1).ToArray(), stdout, stderr);
+
+        stderr.WriteLine(Usage);
+        return 2;
+    }
+
+    private static int Generate(IReadOnlyList<string> paths, TextWriter stdout, TextWriter stderr)
     {
         if (paths.Count is < 1 or > Compositor.MaximumImages)
         {
-            Console.Error.WriteLine($"Choose between one and {Compositor.MaximumImages} images.");
+            stderr.WriteLine($"Choose between one and {Compositor.MaximumImages} images.");
             return 1;
         }
 
@@ -41,20 +47,20 @@ internal static class Program
         {
             var (settings, warning) = SettingsStore.Load(AppPaths.SettingsFile);
             if (warning is not null)
-                Console.Error.WriteLine(warning);
+                stderr.WriteLine(warning);
 
             var result = Compositor.Generate(paths, settings);
-            Console.Out.WriteLine(result.OutputPath);
+            stdout.WriteLine(result.OutputPath);
             return 0;
         }
         catch (SoftstageException ex)
         {
-            Console.Error.WriteLine(ex.Message);
+            stderr.WriteLine(ex.Message);
             return 1;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Softstage could not create the composition. {ex.Message}");
+            stderr.WriteLine($"Softstage could not create the composition. {ex.Message}");
             return 1;
         }
     }
